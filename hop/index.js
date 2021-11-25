@@ -1,5 +1,5 @@
 require('dotenv').config()
-const { Hop, Chain } = require('@hop-protocol/sdk')
+const {AMM, Hop, Chain,Token } = require('@hop-protocol/sdk')
 const { Wallet } = require('ethers')
 const { parseUnits, formatUnits } = require('ethers/lib/utils')
 const Tx = require('ethereumjs-tx')
@@ -56,8 +56,18 @@ function tansfer() {
         })
     });
 }
-tansfer()
+// tansfer()
 
-function add_liquidity(){
-    
+async function add_liquidity(){
+    const privateKey = process.env.PRIVATE_KEY
+    const signer = new Wallet(privateKey)
+
+    const amm = new AMM('mainnet', 'USDC', Chain.xDai,signer);
+    const decimals = 6
+    const amountBN = parseUnits('2', decimals)
+    const num = await amm.calculateAddLiquidityMinimum(amountBN,amountBN)
+    console.log(num.toString())
+    // const tx = await amm.addLiquidity(amountBN, amountBN, '0')
+    // console.log(tx.hash)
 }
+add_liquidity()
