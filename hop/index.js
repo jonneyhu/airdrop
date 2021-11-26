@@ -4,6 +4,7 @@ const { Wallet } = require('ethers')
 const { parseUnits, formatUnits } = require('ethers/lib/utils')
 const Tx = require('ethereumjs-tx')
 const Web3 = require('web3')
+const fs = require("fs")
 
 
 
@@ -24,7 +25,7 @@ async function swap() {
 }
 // swap()
 
-function tansfer() {
+function tansfer(from_key,to_addr,amount,is_matic=false) {
     const xdaiurl = 'https://rpc.xdaichain.com/';
     const xdaichainid = 0x64;
     const maticurl = "https://rpc-mainnet.matic.quiknode.pro";
@@ -70,4 +71,18 @@ async function add_liquidity(){
     // const tx = await amm.addLiquidity(amountBN, amountBN, '0')
     // console.log(tx.hash)
 }
-add_liquidity()
+// add_liquidity()
+
+
+async function main(){
+    let data = fs.readFileSync("key.txt","utf-8");
+    const lines = data.split(/\r?\n/);
+    //转让代币
+    tansfer()
+    //跨桥
+    await swap()
+    //添加流动性／移除流动性
+    await add_liquidity()
+}
+
+main()
