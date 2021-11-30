@@ -80,7 +80,6 @@ const swapAbi = [{
     // const provider = new HDWalletProvider(privateKey,url)
     const signer = new Wallet(privateKey,provider)
     const hop = new Hop('mainnet')
-    const chain = new Chain('polygon',137,provider)
     const bridge = hop.connect(signer).bridge('USDC')
     // console.log(chain.provider)
     // const web3Instance = new Web3(provider)
@@ -199,7 +198,7 @@ async function main(){
 
 
 
-// swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
+swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
-fromHop()
+// fromHop()
 // add_liquidity('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',1)
