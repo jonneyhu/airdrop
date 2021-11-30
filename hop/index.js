@@ -6,7 +6,9 @@ const Tx = require('ethereumjs-tx')
 const Web3 = require('web3')
 const fs = require("fs")
 const util = require("util")
+const HDWalletProvider = require('@truffle/hdwallet-provider')
 const { addresses } = require('@hop-protocol/core/addresses/kovan')
+const { url } = require('inspector')
 const maticUsdc = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174';
 const maticHusdc = '0x9ec9551d4a1a1593b0ee8124d98590cc71b3b09d';
 
@@ -31,10 +33,67 @@ async function getBalance(addr,chain,contract='',decimals=18){
         const balance = await token.balanceOf(addr);
         console.log(balance.toString());
     }
-    
-    
   
  }
+const swapAbi = [{
+    inputs: [
+        {
+            internalType: "uint8",
+            name: "tokenIndexFrom",
+            type: "uint8"
+        },
+        {
+            internalType: "uint8",
+            name: "tokenIndexTo",
+            type: "uint8"
+        },
+        {
+            internalType: "uint256",
+            name: "dx",
+            type: "uint256"
+        },
+        {
+            internalType: "uint256",
+            name: "minDy",
+            type: "uint256"
+        },
+        {
+            internalType: "uint256",
+            name: "deadline",
+            type: "uint256"
+        }
+    ],
+    name: "swap",
+    outputs: [
+        {
+            internalType: "uint256",
+            name: "",
+            type: "uint256"
+        }
+    ],
+    stateMutability: "nonpayable",
+    type: "function"
+},]
+ async function fromHop(){
+    const privateKey = process.env.PRIVATE_KEY
+    const url = 'https://polygon-rpc.com'
+    // const provider = new HDWalletProvider(privateKey,url)
+    const signer = new Wallet(privateKey,provider)
+    const hop = new Hop('mainnet')
+    const chain = new Chain('polygon',137,provider)
+    const bridge = hop.connect(signer).bridge('USDC')
+    // console.log(chain.provider)
+    // const web3Instance = new Web3(provider)
+    // const swapContract =  new web3Instance.eth.Contract(
+    //     swapAbi,
+    //     '0x5C32143C8B198F392d01f8446b754c181224ac26',
+    //     {gasLimit:'1000000'}
+    // )
+    // const tx = swapContract.methods.swap(1,0,473666,471244,1638775704).send({from:'0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555'})
+    const tx = await bridge.execSaddleSwap(Chain.Polygon,false,'473700')
+    console.log(tx.transactionHash);
+ }
+
 
 async function swap(privateKey,amount) {
     // const privateKey = process.env.PRIVATE_KEY
@@ -49,13 +108,13 @@ async function swap(privateKey,amount) {
     console.log(amountOut.toString())
     const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
     console.log(tx.hash)
-    setTimeout(async function(){
-        let tx2 = await bridge.send(amountOut.toString(),chain.xDai,chain.Polygon);
-        console.log(tx2.hash);
-    },5000)
+    // setTimeout(async function(){
+    //     let tx2 = await bridge.send(amountOut.toString(),chain.xDai,chain.Polygon);
+    //     console.log(tx2.hash);
+    // },5000)
    
 }
-// swap()
+
 
 function tansfer(from_key,to_addr,amount,is_matic=false) {
     const xdaiurl = 'https://rpc.xdaichain.com/';
@@ -95,21 +154,24 @@ async function add_liquidity(privateKey,amount){
     // const privateKey = process.env.PRIVATE_KEY
     const signer = new Wallet(privateKey)
 
-    const amm = new AMM('mainnet', 'USDC', Chain.xDai,signer);
+    const amm = new AMM('mainnet', 'USDC', Chain.Polygon,signer);
+    // const hop = new Hop('mainnet', signer)
+    // const bridge = hop.connect(signer).bridge('USDC')
     const decimals = 6
     const amount_s = util.format('%s',amount);
     const amountBN = parseUnits(amount_s, decimals)
+    // const tx = await bridge.addLiquidity(amountBN,'0',Chain.Polygon)
     // const num = await amm.calculateAddLiquidityMinimum(amountBN,amountBN)
     // console.log(num.toString())
     const tx = await amm.addLiquidity(amountBN, '0', '0')
     console.log(tx.hash)
-    setTimeout(async function(){
-        let amountlp = amount*0.97 ;
-        const decimals = 6
-        const amount_s = util.format('%s',amountlp);
-        const amountBN = parseUnits(amount_s, decimals)
-        let tx = await amm.removeLiquidity()
-    },60000)
+    // setTimeout(async function(){
+    //     let amountlp = amount*0.97 ;
+    //     const decimals = 6
+    //     const amount_s = util.format('%s',amountlp);
+    //     const amountBN = parseUnits(amount_s, decimals)
+    //     let tx = await amm.removeLiquidity()
+    // },60000)
 }
 // add_liquidity()
 
@@ -138,4 +200,6 @@ async function main(){
 
 
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
-getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
+// getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
+fromHop()
+// add_liquidity('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',1)
