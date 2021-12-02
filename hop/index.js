@@ -93,23 +93,18 @@ async function swap(privateKey, amount) {
     const amountBN = parseUnits(amount_s, decimals)
     const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
     console.log('send from matic:', tx.hash)
-    while (true) {
-        sleep(5000);
-        let amount = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
-        if (amount.toBigInt >){
-
-        }
-        
-
-    }
-    const xdaiurl = 'https://rpc.xdaichain.com/';
-    const provider = new providers.JsonRpcProvider(xdaiurl)
-    const signer = new Wallet(privateKey, provider)
-    const hop = new Hop('mainnet', signer)
-    const bridge = hop.connect(signer).bridge('USDC')
-    let amountBN = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
-    let tx2 = await bridge.send(amountBN, chain.xDai, chain.Polygon);
-    console.log('send from xdai', tx2.hash);
+    setTimeout(async function(){
+        const xdaiurl = 'https://rpc.xdaichain.com/';
+        const provider = new providers.JsonRpcProvider(xdaiurl)
+        const signer = new Wallet(privateKey, provider)
+        const hop = new Hop('mainnet', signer)
+        const bridge = hop.connect(signer).bridge('USDC')
+        let amountBN = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
+        let tx2 = await bridge.send(amountBN, chain.xDai, chain.Polygon);
+        console.log('send from xdai', tx2.hash);
+        await add_remove_liquidity(key, 12);
+   },1000)
+   
 }
 
 async function erc20Transfer(from_key, to_addr, amount) {
@@ -215,6 +210,9 @@ async function add_remove_liquidity(privateKey, amount) {
         let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
         let tx = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
         console.log('remove_liquidity:', tx.hash)
+        await erc20Transfer(key, to_addr);
+        await nativateTansfer(key, to_addr)
+        await nativateTansfer(key, to_addr, true)
     }, 180000)
 }
 
@@ -262,21 +260,19 @@ function sleep(delay) {
     for (let t = Date.now(); Date.now() - t <= delay;);
 }
 
-function test() {
-    // const usdc_balance = await getBalance('0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555', Chain.Polygon, maticUsdc, 6)
-    // console.log(usdc_balance)
-    var i = 1;
-    while (1) {
-        i++
-        sleep(1000)
-        console.log(i)
-        if (i > 5) {
-
-            break
-        }
-    }
-
+async function test() {
+    console.time('test')
+   for(let i=0;i<10;i++){
+       setTimeout(async function(){
+        const usdc_balance = await getBalance('0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555', Chain.Polygon, maticUsdc, 6)
+        console.log(usdc_balance)
+    
+       },1)
+   }
+   console.log('aa')
+   console.timeEnd('test')
 }
+
 
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
