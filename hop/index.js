@@ -1,6 +1,6 @@
 require('dotenv').config()
 const {AMM, Hop, Chain,Token } = require('@hop-protocol/sdk')
-const { Wallet } = require('ethers')
+const { Wallet,providers } = require('ethers')
 const { parseUnits, formatUnits } = require('ethers/lib/utils')
 const Tx = require('ethereumjs-tx')
 const Web3 = require('web3')
@@ -78,7 +78,12 @@ const swapAbi = [{
     const privateKey = process.env.PRIVATE_KEY
     const url = 'https://polygon-rpc.com'
     // const provider = new HDWalletProvider(privateKey,url)
-    const signer = new Wallet(privateKey,provider)
+    // console.log(provider);
+    const provider =new providers.JsonRpcProvider(url)
+    
+    const wallet = new Wallet(privateKey,provider)
+    const signer = wallet.connect(provider)
+    console.log(provider.getSigner())
     const hop = new Hop('mainnet')
     const bridge = hop.connect(signer).bridge('USDC')
     // console.log(chain.provider)
@@ -89,22 +94,27 @@ const swapAbi = [{
     //     {gasLimit:'1000000'}
     // )
     // const tx = swapContract.methods.swap(1,0,473666,471244,1638775704).send({from:'0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555'})
-    const tx = await bridge.execSaddleSwap(Chain.Polygon,false,'473700')
+    const decimals = 6
+    const amount_s = util.format('%s',0.4);
+    const amountBN = parseUnits(amount_s, decimals);
+    const tx = await bridge.execSaddleSwap(Chain.Polygon,false,amountBN,amountBN,1638348800)
     console.log(tx.transactionHash);
  }
 
 
 async function swap(privateKey,amount) {
     // const privateKey = process.env.PRIVATE_KEY
-    const signer = new Wallet(privateKey)
+    const url = 'https://polygon-rpc.com'
+    const provider =new providers.JsonRpcProvider(url)
+    const signer = new Wallet(privateKey,provider)
     const hop = new Hop('mainnet', signer)
     const bridge = hop.connect(signer).bridge('USDC')
     // send 10 USDC tokens from Polygon -> xDai
     const decimals = 6
     const amount_s = util.format('%s',amount);
     const amountBN = parseUnits(amount_s, decimals);
-    const amountOut = await bridge.getAmountOut(amountBN, Chain.Polygon, Chain.xDai)
-    console.log(amountOut.toString())
+    // const amountOut = await bridge.getAmountOut(amountBN, Chain.Polygon, Chain.xDai)
+    // console.log(amountOut.toString())
     const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
     console.log(tx.hash)
     // setTimeout(async function(){
@@ -151,26 +161,28 @@ function tansfer(from_key,to_addr,amount,is_matic=false) {
 
 async function add_liquidity(privateKey,amount){
     // const privateKey = process.env.PRIVATE_KEY
-    const signer = new Wallet(privateKey)
+    const url = 'https://polygon-rpc.com'
+    const provider =new providers.JsonRpcProvider(url)
+    const signer = new Wallet(privateKey,provider)
 
-    const amm = new AMM('mainnet', 'USDC', Chain.Polygon,signer);
-    // const hop = new Hop('mainnet', signer)
-    // const bridge = hop.connect(signer).bridge('USDC')
+    // const amm = new AMM('mainnet', 'USDC', Chain.Polygon,signer);
+    const hop = new Hop('mainnet', signer)
+    const bridge = hop.connect(signer).bridge('USDC')
     const decimals = 6
     const amount_s = util.format('%s',amount);
     const amountBN = parseUnits(amount_s, decimals)
-    // const tx = await bridge.addLiquidity(amountBN,'0',Chain.Polygon)
+    const tx = await bridge.addLiquidity(amountBN,'0',Chain.Polygon)
     // const num = await amm.calculateAddLiquidityMinimum(amountBN,amountBN)
     // console.log(num.toString())
-    const tx = await amm.addLiquidity(amountBN, '0', '0')
+    // const tx = await amm.addLiquidity(amountBN, '0', '0')
     console.log(tx.hash)
-    // setTimeout(async function(){
-    //     let amountlp = amount*0.97 ;
-    //     const decimals = 6
-    //     const amount_s = util.format('%s',amountlp);
-    //     const amountBN = parseUnits(amount_s, decimals)
-    //     let tx = await amm.removeLiquidity()
-    // },60000)
+    setTimeout(async function(){
+        let amountlp = amount*0.97 ;
+        const decimals = 6
+        const amount_s = util.format('%s',amountlp);
+        const amountBN = parseUnits(amount_s, decimals)
+        let tx = await bridge.removeLiquidityOneToken()
+    },60000)
 }
 // add_liquidity()
 

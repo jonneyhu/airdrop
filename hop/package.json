@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@hop-protocol/sdk": "^0.0.1-beta.256",
+    "@hop-protocol/sdk": "^0.0.1-beta.265",
     "@truffle/hdwallet-provider": "^1.7.0"
   }
 }
