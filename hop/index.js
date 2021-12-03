@@ -1,6 +1,6 @@
 require('dotenv').config()
 const { AMM, Hop, Chain, Token } = require('@hop-protocol/sdk')
-const { Wallet, providers } = require('ethers')
+const { Wallet, providers,BigNumber } = require('ethers')
 const { parseUnits, formatUnits } = require('ethers/lib/utils')
 const Tx = require('ethereumjs-tx')
 const Web3 = require('web3')
@@ -75,7 +75,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
     const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
     const allowance = await l2CanonicalToken.allowance(ammWrapper.address);
-    if (allowance.lt(ethers_1.BigNumber.from(amount))) {
+    if (allowance.lt(BigNumber.from(amount))) {
         // throw new Error('not enough allowance');
         const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
         yield(tx === null || tx === void 0 ? void 0 : tx.wait());
