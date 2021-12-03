@@ -297,7 +297,7 @@ async function main() {
 }
 
 async function test() {
-    await send('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', true, 2)
+    await send('3fe98e7c9017a295b0c6236715b66d56839d482968425b5527fffc39ab1e16d6', true, 2)
 }
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
