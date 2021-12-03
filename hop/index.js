@@ -1,6 +1,6 @@
 require('dotenv').config()
 const { AMM, Hop, Chain, Token } = require('@hop-protocol/sdk')
-const { Wallet, providers,BigNumber } = require('ethers')
+const { Wallet, providers, BigNumber } = require('ethers')
 const { parseUnits, formatUnits } = require('ethers/lib/utils')
 const Tx = require('ethereumjs-tx')
 const Web3 = require('web3')
@@ -80,16 +80,18 @@ async function send(privateKey, ismatic = true, amount = 0) {
         const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
         // await (tx === null || tx === void 0 ? void 0 : tx.wait());
         const web3 = new Web3(url);
-        val =await web3.eth.getTransactionReceipt(tx.hash)
-        if (val.status){
-            console.log(tx.hash)
-        }else{
-            console.log(val.status)
-            return
+        while (1) {
+            val = await web3.eth.getTransactionReceipt(tx.hash)
+            if (typeof val != "null") {
+                if(val.status){
+                    break
+                }
+            } 
         }
-        
+
+
     }
-    
+
     if (ismatic) {
         const decimals = 6
         const amount_s = util.format('%s', amount);
@@ -309,5 +311,5 @@ async function test() {
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
 // add_liquidity('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', 1)
-// main()
-test()
+main()
+// test()
