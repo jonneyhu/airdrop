@@ -55,7 +55,7 @@ const erc20TransferAbi = [{
 },]
 
 
-async function send(privateKey,ismatic = true, amount=0) {
+async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         var url = 'https://polygon-rpc.com';
     } else {
@@ -66,7 +66,21 @@ async function send(privateKey,ismatic = true, amount=0) {
     const signer = new Wallet(privateKey, provider)
     const hop = new Hop('mainnet', signer)
     const bridge = hop.connect(signer).bridge('USDC')
-
+    if (ismatic) {
+        var sourceChain = Chain.Polygon
+    }
+    else {
+        var sourceChain = Chain.xDai
+    }
+    ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
+    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
+    const allowance = await l2CanonicalToken.allowance(ammWrapper.address);
+    if (allowance.lt(ethers_1.BigNumber.from(amount))) {
+        // throw new Error('not enough allowance');
+        const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
+        yield(tx === null || tx === void 0 ? void 0 : tx.wait());
+    }
+    
     if (ismatic) {
         const decimals = 6
         const amount_s = util.format('%s', amount);
@@ -83,11 +97,11 @@ async function send(privateKey,ismatic = true, amount=0) {
 
 async function swap(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
-    for(let i=0;i<5;i++){
-        await send(privateKey,true,amount)
+    for (let i = 0; i < 5; i++) {
+        await send(privateKey, true, amount)
     }
     sleep(300000)
-    await send(privateKey,false)
+    await send(privateKey, false)
 }
 
 async function erc20Transfer(from_key, to_addr, amount) {
@@ -203,7 +217,7 @@ async function once(lines) {
     // const lines = data.split(/\r?\n/);
 
     for (var i = 0; i < lines.length; i++) {
-        if(i==1){
+        if (i == 1) {
             break
         }
         let item = lines[i];
@@ -212,7 +226,7 @@ async function once(lines) {
         let key = line[1];
         let item2 = lines[i + 1];
         let to_addr = item2.split(" ")[0];
-        console.log(addr,to_addr)
+        console.log(addr, to_addr)
         const usdc_balance = await getBalance(addr, Chain.Polygon, maticUsdc, 6)
         const nativate_balance = await getBalance(addr, Chain.Polygon)
         console.log('[%s] usdc(%s) matic(%s)', addr, usdc_balance.toString(), nativate_balance.toString())
@@ -254,8 +268,8 @@ async function main() {
     var line2 = lines.slice(52, 92);
     var line3 = lines.slice(92, 132);
     var line4 = lines.slice(132, 172);
-    var line5 = lines.slice(172,212);
-    var res = [line1, line2, line3, line4,line5];
+    var line5 = lines.slice(172, 212);
+    var res = [line1, line2, line3, line4, line5];
     var initial = [
         '0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555 57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',
         '0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365 70e5fbb405e7efabc47d678f3454555ae9b968fa119d8122fd5a2000eba2100d',
@@ -267,20 +281,20 @@ async function main() {
         res[i].unshift(initial[i]);
 
         setTimeout(async function () {
-            try{
+            try {
                 await once(res[i])
-            }catch(error){
-                console.log('line:',i)
+            } catch (error) {
+                console.log('line:', i)
                 throw error
             }
-            
+
         }, 1)
     }
 
 }
 
-async function test(){
-    await send('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46',true,2)
+async function test() {
+    await send('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', true, 2)
 }
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
