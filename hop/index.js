@@ -79,8 +79,15 @@ async function send(privateKey, ismatic = true, amount = 0) {
         // throw new Error('not enough allowance');
         const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
         // await (tx === null || tx === void 0 ? void 0 : tx.wait());
-        console.log('apporve:',tx)
-        sleep(5000)
+        const web3 = new Web3(url);
+        val =await web3.eth.getTransactionReceipt(tx.hash)
+        if (val.status){
+            console.log(tx.hash)
+        }else{
+            console.log(val.status)
+            return
+        }
+        
     }
     
     if (ismatic) {
@@ -296,7 +303,7 @@ async function main() {
 }
 
 async function test() {
-    await send('cc042762a0cfd5a25595bb1f6abc266d8048ab6b432a30a96db3f0e23857f628', true, 2)
+    await send('70e5fbb405e7efabc47d678f3454555ae9b968fa119d8122fd5a2000eba2100d', true, 2)
 }
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
