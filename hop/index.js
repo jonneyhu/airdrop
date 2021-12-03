@@ -9,7 +9,6 @@ const util = require("util")
 const HDWalletProvider = require('@truffle/hdwallet-provider')
 const { addresses } = require('@hop-protocol/core/addresses/kovan')
 const { url } = require('inspector')
-const { time } = require('console')
 const maticUsdc = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174';
 const maticHusdc = '0x9ec9551d4a1a1593b0ee8124d98590cc71b3b09d';
 const usdcLp = '0x9d373d22fd091d7f9a6649eb067557cc12fb1a0a';
@@ -81,7 +80,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
         const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
         // await (tx === null || tx === void 0 ? void 0 : tx.wait());
         console.log('apporve:',tx)
-        time.sleep(5000)
+        sleep(5000)
     }
     
     if (ismatic) {
@@ -297,7 +296,7 @@ async function main() {
 }
 
 async function test() {
-    await send('3fe98e7c9017a295b0c6236715b66d56839d482968425b5527fffc39ab1e16d6', true, 2)
+    await send('cc042762a0cfd5a25595bb1f6abc266d8048ab6b432a30a96db3f0e23857f628', true, 2)
 }
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
