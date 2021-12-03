@@ -198,7 +198,7 @@ async function add_remove_liquidity(privateKey, amount) {
 }
 
 
-async function main(lines) {
+async function once(lines) {
     // let data = fs.readFileSync("key.txt", "utf-8");
     // const lines = data.split(/\r?\n/);
 
@@ -212,6 +212,7 @@ async function main(lines) {
         let key = line[1];
         let item2 = lines[i + 1];
         let to_addr = item2.split(" ")[0];
+        console.log(addr,to_addr)
         const usdc_balance = await getBalance(addr, Chain.Polygon, maticUsdc, 6)
         const nativate_balance = await getBalance(addr, Chain.Polygon)
         console.log('[%s] usdc(%s) matic(%s)', addr, usdc_balance.toString(), nativate_balance.toString())
@@ -246,7 +247,7 @@ function sleep(delay) {
     for (let t = Date.now(); Date.now() - t <= delay;);
 }
 
-async function test() {
+async function main() {
     let data = fs.readFileSync("key.txt", "utf-8");
     const lines = data.split(/\r?\n/);
     var line1 = lines.slice(12, 52);
@@ -267,7 +268,7 @@ async function test() {
 
         setTimeout(async function () {
             try{
-                await main(res[i])
+                await once(res[i])
             }catch(error){
                 console.log('line:',i)
                 throw error
@@ -278,7 +279,9 @@ async function test() {
 
 }
 
-
+async function test(){
+    await send('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46',true,2)
+}
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
