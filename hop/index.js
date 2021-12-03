@@ -9,6 +9,7 @@ const util = require("util")
 const HDWalletProvider = require('@truffle/hdwallet-provider')
 const { addresses } = require('@hop-protocol/core/addresses/kovan')
 const { url } = require('inspector')
+const { time } = require('console')
 const maticUsdc = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174';
 const maticHusdc = '0x9ec9551d4a1a1593b0ee8124d98590cc71b3b09d';
 const usdcLp = '0x9d373d22fd091d7f9a6649eb067557cc12fb1a0a';
@@ -78,7 +79,9 @@ async function send(privateKey, ismatic = true, amount = 0) {
     if (allowance.lt(BigNumber.from(amount))) {
         // throw new Error('not enough allowance');
         const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
-        await (tx === null || tx === void 0 ? void 0 : tx.wait());
+        // await (tx === null || tx === void 0 ? void 0 : tx.wait());
+        console.log('apporve:',tx)
+        time.sleep(5000)
     }
     
     if (ismatic) {
