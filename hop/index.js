@@ -75,18 +75,22 @@ async function send(privateKey, ismatic = true, amount = 0) {
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
     const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
     const allowance = await l2CanonicalToken.allowance(ammWrapper.address);
-    if (allowance.lt(BigNumber.from(amount))) {
+    const decimals = 6
+    const amount_s = util.format('%s', amount);
+    const amountBN = parseUnits(amount_s, decimals)
+    if (allowance.lt(BigNumber.from(amountBN))) {
         // throw new Error('not enough allowance');
-        const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
+        const tx = await l2CanonicalToken.approve(ammWrapper.address, '115792089237316195423570985008687907853269984665640564039457584007913001639935');
         // await (tx === null || tx === void 0 ? void 0 : tx.wait());
         const web3 = new Web3(url);
         while (1) {
             val = await web3.eth.getTransactionReceipt(tx.hash)
+            console.log(signer.address, val)
             if (typeof val != "null") {
-                if(val.status){
+                if (val.status) {
                     break
                 }
-            } 
+            }
         }
 
 
@@ -304,12 +308,52 @@ async function main() {
 
 }
 
-async function test() {
-    await send('70e5fbb405e7efabc47d678f3454555ae9b968fa119d8122fd5a2000eba2100d', true, 2)
+async function test(privateKey, ismatic = true, amount = 0) {
+    if (ismatic) {
+        var url = 'https://polygon-rpc.com';
+    } else {
+        var url = 'https://rpc.xdaichain.com/';
+    }
+
+    const provider = new providers.JsonRpcProvider(url)
+    const signer = new Wallet(privateKey, provider)
+    const hop = new Hop('mainnet', signer)
+    const bridge = hop.connect(signer).bridge('USDC')
+    if (ismatic) {
+        var sourceChain = Chain.Polygon
+    }
+    else {
+        var sourceChain = Chain.xDai
+    }
+    const decimals = 6
+    const amount_s = util.format('%s', amount);
+    const amountBN = parseUnits(amount_s, decimals)
+    ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
+    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
+    const allowance = await l2CanonicalToken.allowance(ammWrapper.address);
+    console.log(allowance.toString())
+    if (allowance.lt(BigNumber.from(amountBN))) {
+        // throw new Error('not enough allowance');
+        const tx = await l2CanonicalToken.approve(ammWrapper.address, '115792089237316195423570985008687907853269984665640564039457584007913001639935');
+        // await (tx === null || tx === void 0 ? void 0 : tx.wait());
+        const web3 = new Web3(url);
+        while (1) {
+            val = await web3.eth.getTransactionReceipt(tx.hash)
+            console.log(val)
+            if (val != null) {
+                if (val.status) {
+                    break
+                }
+            }
+        }
+
+
+    }
+
 }
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
 // add_liquidity('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', 1)
-main()
-// test()
+// main()
+test('3fe98e7c9017a295b0c6236715b66d56839d482968425b5527fffc39ab1e16d6', true, 12)
