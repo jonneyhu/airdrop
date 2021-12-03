@@ -78,7 +78,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
     if (allowance.lt(BigNumber.from(amount))) {
         // throw new Error('not enough allowance');
         const tx = await l2CanonicalToken.approve(ammWrapper.address, amount);
-        yield(tx === null || tx === void 0 ? void 0 : tx.wait());
+        await (tx === null || tx === void 0 ? void 0 : tx.wait());
     }
     
     if (ismatic) {
