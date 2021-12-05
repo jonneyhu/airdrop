@@ -1,6 +1,6 @@
 require('dotenv').config()
 const { AMM, Hop, Chain, Token } = require('@hop-protocol/sdk')
-const { Wallet, providers, BigNumber } = require('ethers')
+const { Wallet, providers, BigNumber,constants } = require('ethers')
 const { parseUnits, formatUnits } = require('ethers/lib/utils')
 const Tx = require('ethereumjs-tx')
 const Web3 = require('web3')
@@ -13,6 +13,8 @@ const maticUsdc = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174';
 const maticHusdc = '0x9ec9551d4a1a1593b0ee8124d98590cc71b3b09d';
 const usdcLp = '0x9d373d22fd091d7f9a6649eb067557cc12fb1a0a';
 const xdaiUsdc = '0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83';
+const matic_liqulity = '0x5C32143C8B198F392d01f8446b754c181224ac26';
+const amountToApprove = constants.MaxUint256
 
 
 async function getBalance(addr, chain, contract = '', decimals = 18) {
@@ -80,26 +82,15 @@ async function send(privateKey, ismatic = true, amount = 0) {
     const amountBN = parseUnits(amount_s, decimals)
     if (allowance.lt(BigNumber.from(amountBN))) {
         // throw new Error('not enough allowance');
-        const tx = await l2CanonicalToken.approve(ammWrapper.address, '115792089237316195423570985008687907853269984665640564039457584007913001639935');
+        const tx = await l2CanonicalToken.approve(ammWrapper.address, amountToApprove);
         // await (tx === null || tx === void 0 ? void 0 : tx.wait());
-        const web3 = new Web3(url);
-        while (1) {
-            val = await web3.eth.getTransactionReceipt(tx.hash)
-            console.log(signer.address, val)
-            if (typeof val != "null") {
-                if (val.status) {
-                    break
-                }
-            }
-        }
-
-
+        await wait_tx_ok(url,tx.hash)
     }
 
     if (ismatic) {
-        const decimals = 6
-        const amount_s = util.format('%s', amount);
-        const amountBN = parseUnits(amount_s, decimals)
+        // const decimals = 6
+        // const amount_s = util.format('%s', amount);
+        // const amountBN = parseUnits(amount_s, decimals)
         const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
         console.log('send from matic:', tx.hash)
     } else {
@@ -117,38 +108,54 @@ async function swap(privateKey, amount) {
     }
     sleep(300000)
     await send(privateKey, false)
+    sleep(300000)
 }
 
-async function erc20Transfer(from_key, to_addr, amount) {
+async function erc20Transfer(from_key, to_addr, amount=0) {
     const maticurl = "https://rpc-mainnet.matic.quiknode.pro";
     const maticchainid = 0x89;
-    const web3 = new Web3(maticurl);
-    const signer = new Wallet(privateKey);
+    const provider =new HDWalletProvider(from_key,maticurl)
+    const web3 = new Web3(provider);
+    const signer = new Wallet(from_key);
     var _from = signer.address;
-    var balance = await getBalance(_from, Chain.Polygon)
+    if (amount>0){
+        const decimals = 6
+        const amount_s = util.format('%s', amount);
+        const amountBN = parseUnits(amount_s, decimals)
+        var balance = amountBN;
+    }else{
+        var balance = await getBalance(_from, Chain.Polygon,maticUsdc,6);
+    }
     var privateKey = Buffer.from(from_key, 'hex');
-    const matic_contract = web3.eth.contract(erc20TransferAbi).at(maticUsdc)
-    web3.eth.getTransactionCount(_from, (err, txcount) => {
-        var txObject = {
-            nonce: web3.utils.toHex(txcount),
-            gasPrice: web3.utils.toHex(web3.utils.toWei('30', 'gwei')),
-            gasLimit: web3.utils.toHex(21000),
-            to: to_addr,
-            data: matic_contract.methods.tansfer(to_addr, balance.toBigInt()).encodeABI(),
-            chainId: maticchainid
-        }
-        var tx = new Tx(txObject);
-        tx.sign(privateKey);
-        var serializedTx = tx.serialize();
+    const matic_contract =new web3.eth.Contract(erc20TransferAbi,maticUsdc)
+    try{
+        const tx = await matic_contract.methods.transfer(to_addr, balance.toString()).send({from:_from})
+        console.log('erc20transfer:',tx.transactionHash)
+    }catch(err){
 
-        web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), function (err, hash) {
-            if (!err) {
-                console.log('erc20transfer:', hash);
-            } else {
-                console.log(err);
-            }
-        })
-    })
+    }
+    // web3.eth.getTransactionCount(_from, (err, txcount) => {
+    //     console.log(web3.utils.toHex(web3.utils.toWei('30000000000', 'gwei')))
+    //     var txObject = {
+    //         nonce: web3.utils.toHex(txcount),
+    //         gasPrice: '0x6fc23ac00',
+    //         gasLimit: web3.utils.toHex(21000),
+    //         to: to_addr,
+    //         data: matic_contract.methods.transfer(to_addr, balance.toString()).encodeABI(),
+    //         chainId: maticchainid
+    //     }
+    //     var tx = new Tx(txObject);
+    //     tx.sign(privateKey);
+    //     var serializedTx = tx.serialize();
+    //     web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), async function (err, hash) {
+    //         if (!err) {
+    //             console.log('erc20transfer:', hash);
+    //             await wait_tx_ok(maticurl,hash)
+    //         } else {
+    //             console.log(err);
+    //         }
+    //     })
+    // })
 
 }
 
@@ -161,24 +168,25 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
     const maticchainid = 0x89;
     const fee = 0.001 * (Math.pow(10, 18));
     if (ismatic) {
+        var url = maticurl;
         var web3 = new Web3(maticurl);
         var gasprice = web3.utils.toHex(web3.utils.toWei('30', 'gwei'))
-        const signer = new Wallet(privateKey);
+        const signer = new Wallet(from_key);
         var _from = signer.address;
         var balance = await getBalance(_from, Chain.Polygon)
         var amount = balance - fee;
         var chainid = maticchainid;
 
     } else {
+        var url = xdaiurl;
         var web3 = new Web3(xdaiurl);
-        var gasprice = web3.utils.toHex(web3.utils.toWei('2', 'gwei'))
-        const signer = new Wallet(privateKey);
+        var gasprice = web3.utils.toHex(web3.utils.toWei('3', 'gwei'))
+        const signer = new Wallet(from_key);
         var _from = signer.address;
         var balance = await getBalance(_from, Chain.xDai)
         var amount = balance - fee;
         var chainid = xdaichainid;
     }
-
 
     var privateKey = Buffer.from(from_key, 'hex');//process.env.PRIVATE_KEY_1
     web3.eth.getTransactionCount(_from, (err, txcount) => {
@@ -194,9 +202,10 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
         tx.sign(privateKey);
         var serializedTx = tx.serialize();
 
-        web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), function (err, hash) {
+        web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'),async function (err, hash) {
             if (!err) {
                 console.log('nativate_transfer:', hash);
+                await wait_tx_ok(url,hash)
             } else {
                 console.log(err);
             }
@@ -205,7 +214,21 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
 
 
 }
-// tansfer()
+
+async function wait_tx_ok(url,hash){
+    const web3 = new Web3(url);
+        while (1) {
+            val = await web3.eth.getTransactionReceipt(hash)
+            
+            if ( val != null) {
+                
+                console.log(val.status)
+                break
+               
+            }
+            sleep(1000)
+        }
+}
 
 async function add_remove_liquidity(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
@@ -214,16 +237,36 @@ async function add_remove_liquidity(privateKey, amount) {
     const signer = new Wallet(privateKey, provider)
     const hop = new Hop('mainnet', signer)
     const bridge = hop.connect(signer).bridge('USDC')
+    var sourceChain = Chain.Polygon
     const decimals = 6
     const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
-    const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon)
-    console.log('add_liquidity:', tx.hash)
-    sleep(20000)
+    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
+    const allowance = await l2CanonicalToken.allowance(matic_liqulity);
+  
+    if (allowance.lt(BigNumber.from(amountBN))) {
+        // throw new Error('not enough allowance');
+        const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
+        // await (tx === null || tx === void 0 ? void 0 : tx.wait());
+       await wait_tx_ok(url,tx.hash);
+
+
+    }
+    const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
+    console.log('add_liquidity:', tx.hash);
+    await wait_tx_ok(url,tx.hash);
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
+    const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
+    const allowance1 = await lpToken.allowance(matic_liqulity)
+    if (allowance1.lt(BigNumber.from(amountlp))) {
+        // throw new Error('not enough allowance');
+        const tx = await lpToken.approve(matic_liqulity,amountToApprove );
+        await wait_tx_ok(url,tx.hash);
+
+    }
     let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
     console.log('remove_liquidity:', tx1.hash)
-
+    await wait_tx_ok(url,tx1.hash);
 }
 
 
@@ -248,13 +291,9 @@ async function once(lines) {
         // 先完成垮桥，然后添加流动性，移除流动性，最后将代币转移到下一个地址
         try {
             await swap(key, 12);
-            sleep(300000)
             await add_remove_liquidity(key, 20);
-            sleep(20000)
             await erc20Transfer(key, to_addr);
-            sleep(20000)
             await nativateTansfer(key, to_addr)
-            sleep(20000)
             await nativateTansfer(key, to_addr, true)
             const usdc_balance = await getBalance(to_addr, Chain.Polygon, maticUsdc, 6)
             const nativate_balance = await getBalance(to_addr, Chain.Polygon)
@@ -325,35 +364,40 @@ async function test(privateKey, ismatic = true, amount = 0) {
     else {
         var sourceChain = Chain.xDai
     }
-    const decimals = 6
-    const amount_s = util.format('%s', amount);
-    const amountBN = parseUnits(amount_s, decimals)
-    ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
-    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
-    const allowance = await l2CanonicalToken.allowance(ammWrapper.address);
+    // const decimals = 6
+    // const amount_s = util.format('%s', amount);
+    // const amountBN = parseUnits(amount_s, decimals)
+    // ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
+    // const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
+    // const allowance = await l2CanonicalToken.allowance('0x5C32143C8B198F392d01f8446b754c181224ac26');
+    const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
+    const allowance = await lpToken.allowance('0x5C32143C8B198F392d01f8446b754c181224ac26')
     console.log(allowance.toString())
-    if (allowance.lt(BigNumber.from(amountBN))) {
-        // throw new Error('not enough allowance');
-        const tx = await l2CanonicalToken.approve(ammWrapper.address, '115792089237316195423570985008687907853269984665640564039457584007913001639935');
-        // await (tx === null || tx === void 0 ? void 0 : tx.wait());
-        const web3 = new Web3(url);
-        while (1) {
-            val = await web3.eth.getTransactionReceipt(tx.hash)
-            console.log(val)
-            if (val != null) {
-                if (val.status) {
-                    break
-                }
-            }
-        }
+    // if (allowance.lt(BigNumber.from(amountBN))) {
+    //     // throw new Error('not enough allowance');
+    //     const tx = await l2CanonicalToken.approve(ammWrapper.address, '115792089237316195423570985008687907853269984665640564039457584007913001639935');
+    //     // await (tx === null || tx === void 0 ? void 0 : tx.wait());
+    //     const web3 = new Web3(url);
+    //     while (1) {
+    //         val = await web3.eth.getTransactionReceipt(tx.hash)
+    //         console.log(val)
+    //         if (val != null) {
+    //             if (val.status) {
+    //                 break
+    //             }
+    //         }
+    //     }
 
 
-    }
+    // }
 
 }
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
-// add_liquidity('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', 1)
+// add_remove_liquidity('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', 1)
 // main()
-test('3fe98e7c9017a295b0c6236715b66d56839d482968425b5527fffc39ab1e16d6', true, 12)
+// test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', true, 12)
+// erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
+// nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
+send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false)
