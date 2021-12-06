@@ -60,7 +60,7 @@ const erc20TransferAbi = [{
 async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         var url = 'https://polygon-rpc.com';
-        var balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
+        
     } else {
         var url = 'https://rpc.xdaichain.com/';
     }
@@ -71,9 +71,11 @@ async function send(privateKey, ismatic = true, amount = 0) {
     const bridge = hop.connect(signer).bridge('USDC')
     if (ismatic) {
         var sourceChain = Chain.Polygon
+        var balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
     }
     else {
         var sourceChain = Chain.xDai
+        var balance = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
     }
     const decimals = 6
     const amount_s = util.format('%s', amount);
