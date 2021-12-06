@@ -155,7 +155,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
         console.log('erc20transfer:', tx.transactionHash)
         await wait_tx_ok(maticurl, tx.transactionHash)
     } catch (err) {
-        throw new Error('erc20Transfer:%s' % error);
+        throw new Error('erc20Transfer:%s' % err);
     }
     // web3.eth.getTransactionCount(_from, (err, txcount) => {
     //     console.log(web3.utils.toHex(web3.utils.toWei('30000000000', 'gwei')))
@@ -386,14 +386,32 @@ function wait(ms) {
 };
 
 
-async function test() {
-    for (let i = 0; i < 10; i++) {
-        setTimeout(async function () {
-            // await wait(5000)
-            sleep(5000)
-            console.log('ok')
-        }, 1000)
+async function test(privateKey,ismatic=true,amount=0) {
+    if (ismatic) {
+        var url = 'https://polygon-rpc.com';
+        
+    } else {
+        var url = 'https://rpc.xdaichain.com/';
+    }
 
+    const provider = new providers.JsonRpcProvider(url)
+    const signer = new Wallet(privateKey, provider)
+    const hop = new Hop('mainnet', signer)
+    const bridge = hop.connect(signer).bridge('USDC')
+    if (ismatic) {
+        var sourceChain = Chain.Polygon
+        var balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
+    }
+    else {
+        var sourceChain = Chain.xDai
+        var balance = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
+    }
+    const decimals = 6
+    const amount_s = util.format('%s', amount);
+    const amountBN = parseUnits(amount_s, decimals)
+    if (balance.lt(BigNumber.from(amountBN))) {
+        console.log(balance.toString(),amountBN.toString())
+        return
     }
 
 
@@ -402,8 +420,8 @@ async function test() {
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
 // add_remove_liquidity('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', 1)
-main()
+// main()
 // erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
 // nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
 // send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', false)
-// test()
+test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false,10)
