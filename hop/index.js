@@ -90,12 +90,12 @@ async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
         console.log('send from matic:', tx.hash)
-        await wait_tx_ok(url,tx.hash)
+        await wait_tx_ok(url, tx.hash)
     } else {
         let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
         let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
         console.log('send from xdai', tx2.hash);
-        await wait_tx_ok(url,tx.hash)
+        await wait_tx_ok(url, tx.hash)
     }
 
 }
@@ -104,11 +104,10 @@ async function swap(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
     for (let i = 0; i < 5; i++) {
         await send(privateKey, true, amount)
-        sleep(10000)
     }
-    sleep(300000)
+    await wait(300000)
     await send(privateKey, false)
-    sleep(300000)
+    await wait(300000)
 }
 
 async function erc20Transfer(from_key, to_addr, amount = 0) {
@@ -223,11 +222,11 @@ async function wait_tx_ok(url, hash) {
 
         if (val != null) {
 
-            console.log(hash,val.status)
+            console.log(hash, val.status)
             break
 
         }
-        sleep(1000)
+        await wait(1000)
     }
 }
 
@@ -320,58 +319,30 @@ async function main() {
             try {
                 await once(res[i], i)
             } catch (error) {
-                
-                console.log(i,error)
+
+                console.log(i, error)
             }
 
         }, 1)
     }
 
 }
+// 函数实现，参数单位 毫秒 ；
+function wait(ms) {
+    return new Promise(resolve => setTimeout(() => resolve(), ms));
+};
 
-async function test(privateKey, ismatic = true, amount = 0) {
-    if (ismatic) {
-        var url = 'https://polygon-rpc.com';
-    } else {
-        var url = 'https://rpc.xdaichain.com/';
+
+async function test() {
+    for (let i=0;i<10;i++){
+        setTimeout(async function(){
+            // await wait(5000)
+            sleep(5000)
+            console.log('ok')
+        },1000)
+        
     }
 
-    const provider = new providers.JsonRpcProvider(url)
-    const signer = new Wallet(privateKey, provider)
-    const hop = new Hop('mainnet', signer)
-    const bridge = hop.connect(signer).bridge('USDC')
-    if (ismatic) {
-        var sourceChain = Chain.Polygon
-    }
-    else {
-        var sourceChain = Chain.xDai
-    }
-    // const decimals = 6
-    // const amount_s = util.format('%s', amount);
-    // const amountBN = parseUnits(amount_s, decimals)
-    // ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
-    // const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
-    // const allowance = await l2CanonicalToken.allowance('0x5C32143C8B198F392d01f8446b754c181224ac26');
-    const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
-    const allowance = await lpToken.allowance('0x5C32143C8B198F392d01f8446b754c181224ac26')
-    console.log(allowance.toString())
-    // if (allowance.lt(BigNumber.from(amountBN))) {
-    //     // throw new Error('not enough allowance');
-    //     const tx = await l2CanonicalToken.approve(ammWrapper.address, '115792089237316195423570985008687907853269984665640564039457584007913001639935');
-    //     // await (tx === null || tx === void 0 ? void 0 : tx.wait());
-    //     const web3 = new Web3(url);
-    //     while (1) {
-    //         val = await web3.eth.getTransactionReceipt(tx.hash)
-    //         console.log(val)
-    //         if (val != null) {
-    //             if (val.status) {
-    //                 break
-    //             }
-    //         }
-    //     }
-
-
-    // }
 
 }
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
@@ -379,7 +350,7 @@ async function test(privateKey, ismatic = true, amount = 0) {
 // fromHop()
 // add_remove_liquidity('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', 1)
 main()
-// test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', true, 12)
 // erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
 // nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
 // send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', false)
+// test()
