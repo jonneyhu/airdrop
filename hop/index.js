@@ -95,7 +95,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
         let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
         let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
         console.log('send from xdai', tx2.hash);
-        await wait_tx_ok(url, tx.hash)
+        await wait_tx_ok(url, tx2.hash)
     }
 
 }
@@ -105,9 +105,9 @@ async function swap(privateKey, amount) {
     for (let i = 0; i < 3; i++) {
         await send(privateKey, true, amount)
     }
-    await wait(300000)
+    await wait(500000)
     await send(privateKey, false)
-    await wait(300000)
+    await wait(500000)
 }
 
 async function erc20Transfer(from_key, to_addr, amount = 0) {
@@ -166,7 +166,7 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
     const xdaichainid = 0x64;
     const maticurl = "https://rpc-mainnet.matic.quiknode.pro";
     const maticchainid = 0x89;
-    const fee = 0.001 * (Math.pow(10, 18));
+    const fee = 0.0015 * (Math.pow(10, 18));
     if (ismatic) {
         var url = maticurl;
         var web3 = new Web3(maticurl);
