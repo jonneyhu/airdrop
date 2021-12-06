@@ -56,6 +56,21 @@ const erc20TransferAbi = [{
     type: "function"
 },]
 
+async function wait_tx_ok(url, hash) {
+    const web3 = new Web3(url);
+    while (1) {
+        val = await web3.eth.getTransactionReceipt(hash)
+
+        if (val != null) {
+
+            console.log(hash, val.status)
+            break
+
+        }
+        await wait(1000)
+    }
+}
+
 
 async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
@@ -81,6 +96,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
     const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
+        console.log('ignore:',signer.address)
         return
     }
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
@@ -94,24 +110,35 @@ async function send(privateKey, ismatic = true, amount = 0) {
             // await (tx === null || tx === void 0 ? void 0 : tx.wait());
             await wait_tx_ok(url, tx.hash)
         } catch (error) {
-            console.log('approve:%s' % error);
+            console.log(`approve:${error}`);
             await send(privateKey, ismatic, amount)
         }
 
     }
 
     if (ismatic) {
-
-        const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
-        console.log('send from matic:', tx.hash)
-        await wait_tx_ok(url, tx.hash)
+        try{
+            const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
+            console.log('send from matic:', tx.hash)
+            await wait_tx_ok(url, tx.hash)
+        }catch(error){
+            console.log(`matic send:${error}`);
+            await send(privateKey, ismatic, amount)
+        }
+        
 
 
     } else {
-        let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
-        let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
-        console.log('send from xdai', tx2.hash);
-        await wait_tx_ok(url, tx2.hash)
+        try{
+            let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
+            let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
+            console.log('send from xdai', tx2.hash);
+            await wait_tx_ok(url, tx2.hash)
+        }catch(error){
+            console.log(`xdai send:${error}`);
+            await send(privateKey, ismatic, amount)
+        }
+        
     }
 
 }
@@ -146,6 +173,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     const amount_s = util.format('%s', 1);
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
+        console.log('erc20transfer ignore:',signer.address)
         return
     }
     // var privateKey = Buffer.from(from_key, 'hex');
@@ -157,28 +185,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     } catch (err) {
         throw new Error('erc20Transfer:%s' % err);
     }
-    // web3.eth.getTransactionCount(_from, (err, txcount) => {
-    //     console.log(web3.utils.toHex(web3.utils.toWei('30000000000', 'gwei')))
-    //     var txObject = {
-    //         nonce: web3.utils.toHex(txcount),
-    //         gasPrice: '0x6fc23ac00',
-    //         gasLimit: web3.utils.toHex(21000),
-    //         to: to_addr,
-    //         data: matic_contract.methods.transfer(to_addr, balance.toString()).encodeABI(),
-    //         chainId: maticchainid
-    //     }
-    //     var tx = new Tx(txObject);
-    //     tx.sign(privateKey);
-    //     var serializedTx = tx.serialize();
-    //     web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), async function (err, hash) {
-    //         if (!err) {
-    //             console.log('erc20transfer:', hash);
-    //             await wait_tx_ok(maticurl,hash)
-    //         } else {
-    //             console.log(err);
-    //         }
-    //     })
-    // })
+    
 
 }
 
@@ -214,6 +221,7 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
     const amount_s = util.format('%s', 0.5);
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
+        console.log('nativatetransfer ignore:',signer.address)
         return
     }
     var privateKey = Buffer.from(from_key, 'hex');//process.env.PRIVATE_KEY_1
@@ -241,27 +249,14 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
             })
         });
     } catch (error) {
-        throw new Error('nativateTansfer:%s' % error);
+        throw new Error(`nativateTansfer:${error}` );
     }
 
 
 
 }
 
-async function wait_tx_ok(url, hash) {
-    const web3 = new Web3(url);
-    while (1) {
-        val = await web3.eth.getTransactionReceipt(hash)
 
-        if (val != null) {
-
-            console.log(hash, val.status)
-            break
-
-        }
-        await wait(1000)
-    }
-}
 
 async function add_remove_liquidity(privateKey, amount) {
     const url = 'https://polygon-rpc.com'
@@ -292,7 +287,7 @@ async function add_remove_liquidity(privateKey, amount) {
         console.log('add_liquidity:', tx.hash);
         await wait_tx_ok(url, tx.hash);
     } catch (error) {
-        throw new Error('addLiquidity:%s' % error);
+        console.log(`addLiquidity:${error}`);
     }
 
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
@@ -306,15 +301,13 @@ async function add_remove_liquidity(privateKey, amount) {
         } catch (error) {
             await add_remove_liquidity(privateKey, amount)
         }
-
-
     }
     try {
         let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
         console.log('remove_liquidity:', tx1.hash)
         await wait_tx_ok(url, tx1.hash);
     } catch (error) {
-        throw new Error('removeLiquidityOneToken:%s' % error);
+        throw new Error(`removeLiquidityOneToken:${error}`);
     }
 
 }
@@ -420,8 +413,8 @@ async function test(privateKey,ismatic=true,amount=0) {
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
 // add_remove_liquidity('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', 1)
-// main()
+main()
 // erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
 // nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
 // send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', false)
-test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false,10)
+// test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false,10)
