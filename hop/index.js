@@ -273,7 +273,9 @@ async function add_remove_liquidity(privateKey, amount) {
     const amountBN = parseUnits(amount_s, decimals)
     const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
     const allowance = await l2CanonicalToken.allowance(matic_liqulity);
-
+    if(amount<20){
+        return
+    }
     if (allowance.lt(BigNumber.from(amountBN))) {
         try {
             const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
