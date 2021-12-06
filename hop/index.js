@@ -1,6 +1,6 @@
 require('dotenv').config()
 const { AMM, Hop, Chain, Token } = require('@hop-protocol/sdk')
-const { Wallet, providers, BigNumber,constants } = require('ethers')
+const { Wallet, providers, BigNumber, constants } = require('ethers')
 const { parseUnits, formatUnits } = require('ethers/lib/utils')
 const Tx = require('ethereumjs-tx')
 const Web3 = require('web3')
@@ -84,13 +84,10 @@ async function send(privateKey, ismatic = true, amount = 0) {
         // throw new Error('not enough allowance');
         const tx = await l2CanonicalToken.approve(ammWrapper.address, amountToApprove);
         // await (tx === null || tx === void 0 ? void 0 : tx.wait());
-        await wait_tx_ok(url,tx.hash)
+        await wait_tx_ok(url, tx.hash)
     }
 
     if (ismatic) {
-        // const decimals = 6
-        // const amount_s = util.format('%s', amount);
-        // const amountBN = parseUnits(amount_s, decimals)
         const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
         console.log('send from matic:', tx.hash)
     } else {
@@ -111,27 +108,28 @@ async function swap(privateKey, amount) {
     sleep(300000)
 }
 
-async function erc20Transfer(from_key, to_addr, amount=0) {
+async function erc20Transfer(from_key, to_addr, amount = 0) {
     const maticurl = "https://rpc-mainnet.matic.quiknode.pro";
     const maticchainid = 0x89;
-    const provider =new HDWalletProvider(from_key,maticurl)
+    const provider = new HDWalletProvider(from_key, maticurl)
     const web3 = new Web3(provider);
     const signer = new Wallet(from_key);
     var _from = signer.address;
-    if (amount>0){
+    if (amount > 0) {
         const decimals = 6
         const amount_s = util.format('%s', amount);
         const amountBN = parseUnits(amount_s, decimals)
         var balance = amountBN;
-    }else{
-        var balance = await getBalance(_from, Chain.Polygon,maticUsdc,6);
+    } else {
+        var balance = await getBalance(_from, Chain.Polygon, maticUsdc, 6);
     }
-    var privateKey = Buffer.from(from_key, 'hex');
-    const matic_contract =new web3.eth.Contract(erc20TransferAbi,maticUsdc)
-    try{
-        const tx = await matic_contract.methods.transfer(to_addr, balance.toString()).send({from:_from})
-        console.log('erc20transfer:',tx.transactionHash)
-    }catch(err){
+    // var privateKey = Buffer.from(from_key, 'hex');
+    const matic_contract = new web3.eth.Contract(erc20TransferAbi, maticUsdc)
+    try {
+        const tx = await matic_contract.methods.transfer(to_addr, balance.toString()).send({ from: _from })
+        console.log('erc20transfer:', tx.transactionHash)
+        await wait_tx_ok(maticurl, tx.transactionHash)
+    } catch (err) {
 
     }
     // web3.eth.getTransactionCount(_from, (err, txcount) => {
@@ -202,10 +200,10 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
         tx.sign(privateKey);
         var serializedTx = tx.serialize();
 
-        web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'),async function (err, hash) {
+        web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), async function (err, hash) {
             if (!err) {
                 console.log('nativate_transfer:', hash);
-                await wait_tx_ok(url,hash)
+                await wait_tx_ok(url, hash)
             } else {
                 console.log(err);
             }
@@ -215,23 +213,22 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
 
 }
 
-async function wait_tx_ok(url,hash){
+async function wait_tx_ok(url, hash) {
     const web3 = new Web3(url);
-        while (1) {
-            val = await web3.eth.getTransactionReceipt(hash)
-            
-            if ( val != null) {
-                
-                console.log(val.status)
-                break
-               
-            }
-            sleep(1000)
+    while (1) {
+        val = await web3.eth.getTransactionReceipt(hash)
+
+        if (val != null) {
+
+            console.log(val.status)
+            break
+
         }
+        sleep(1000)
+    }
 }
 
 async function add_remove_liquidity(privateKey, amount) {
-    // const privateKey = process.env.PRIVATE_KEY
     const url = 'https://polygon-rpc.com'
     const provider = new providers.JsonRpcProvider(url)
     const signer = new Wallet(privateKey, provider)
@@ -243,36 +240,32 @@ async function add_remove_liquidity(privateKey, amount) {
     const amountBN = parseUnits(amount_s, decimals)
     const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
     const allowance = await l2CanonicalToken.allowance(matic_liqulity);
-  
+
     if (allowance.lt(BigNumber.from(amountBN))) {
-        // throw new Error('not enough allowance');
         const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
-        // await (tx === null || tx === void 0 ? void 0 : tx.wait());
-       await wait_tx_ok(url,tx.hash);
+        await wait_tx_ok(url, tx.hash);
 
 
     }
     const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
     console.log('add_liquidity:', tx.hash);
-    await wait_tx_ok(url,tx.hash);
+    await wait_tx_ok(url, tx.hash);
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
     const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
     const allowance1 = await lpToken.allowance(matic_liqulity)
     if (allowance1.lt(BigNumber.from(amountlp))) {
         // throw new Error('not enough allowance');
-        const tx = await lpToken.approve(matic_liqulity,amountToApprove );
-        await wait_tx_ok(url,tx.hash);
+        const tx = await lpToken.approve(matic_liqulity, amountToApprove);
+        await wait_tx_ok(url, tx.hash);
 
     }
     let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
     console.log('remove_liquidity:', tx1.hash)
-    await wait_tx_ok(url,tx1.hash);
+    await wait_tx_ok(url, tx1.hash);
 }
 
 
-async function once(lines) {
-    // let data = fs.readFileSync("key.txt", "utf-8");
-    // const lines = data.split(/\r?\n/);
+async function once(lines, num) {
 
     for (var i = 0; i < lines.length; i++) {
         if (i == 1) {
@@ -284,31 +277,20 @@ async function once(lines) {
         let key = line[1];
         let item2 = lines[i + 1];
         let to_addr = item2.split(" ")[0];
-        console.log(addr, to_addr)
-        const usdc_balance = await getBalance(addr, Chain.Polygon, maticUsdc, 6)
-        const nativate_balance = await getBalance(addr, Chain.Polygon)
-        console.log('[%s] usdc(%s) matic(%s)', addr, usdc_balance.toString(), nativate_balance.toString())
-        // 先完成垮桥，然后添加流动性，移除流动性，最后将代币转移到下一个地址
+
         try {
             await swap(key, 12);
             await add_remove_liquidity(key, 20);
             await erc20Transfer(key, to_addr);
             await nativateTansfer(key, to_addr)
             await nativateTansfer(key, to_addr, true)
-            const usdc_balance = await getBalance(to_addr, Chain.Polygon, maticUsdc, 6)
-            const nativate_balance = await getBalance(to_addr, Chain.Polygon)
-            console.log('[%s] usdc(%s) matic(%s)', to_addr, usdc_balance.toString(), nativate_balance.toString())
+
         } catch (error) {
-            console.log(i)
+            console.log(num, i)
             throw error
         }
     }
-    //转让代币
-    // tansfer()
-    //跨桥
-    // await swap()
-    //添加流动性／移除流动性
-    // await add_liquidity()
+
 }
 
 function sleep(delay) {
@@ -336,7 +318,7 @@ async function main() {
 
         setTimeout(async function () {
             try {
-                await once(res[i])
+                await once(res[i], i)
             } catch (error) {
                 console.log('line:', i)
                 throw error
@@ -400,4 +382,4 @@ async function test(privateKey, ismatic = true, amount = 0) {
 // test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', true, 12)
 // erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
 // nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
-send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false)
+send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', false)
