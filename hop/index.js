@@ -90,10 +90,12 @@ async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
         console.log('send from matic:', tx.hash)
+        await wait_tx_ok(url,tx.hash)
     } else {
         let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
         let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
         console.log('send from xdai', tx2.hash);
+        await wait_tx_ok(url,tx.hash)
     }
 
 }
@@ -102,6 +104,7 @@ async function swap(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
     for (let i = 0; i < 5; i++) {
         await send(privateKey, true, amount)
+        sleep(10000)
     }
     sleep(300000)
     await send(privateKey, false)
@@ -220,7 +223,7 @@ async function wait_tx_ok(url, hash) {
 
         if (val != null) {
 
-            console.log(val.status)
+            console.log(hash,val.status)
             break
 
         }
@@ -268,9 +271,6 @@ async function add_remove_liquidity(privateKey, amount) {
 async function once(lines, num) {
 
     for (var i = 0; i < lines.length; i++) {
-        if (i == 1) {
-            break
-        }
         let item = lines[i];
         let line = item.split(" ");
         let addr = line[0];
@@ -320,8 +320,8 @@ async function main() {
             try {
                 await once(res[i], i)
             } catch (error) {
-                console.log('line:', i)
-                throw error
+                
+                console.log(i,error)
             }
 
         }, 1)
