@@ -102,7 +102,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
 
 async function swap(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
         await send(privateKey, true, amount)
     }
     await wait(300000)
