@@ -60,6 +60,7 @@ const erc20TransferAbi = [{
 async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         var url = 'https://polygon-rpc.com';
+        var balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
     } else {
         var url = 'https://rpc.xdaichain.com/';
     }
@@ -74,23 +75,36 @@ async function send(privateKey, ismatic = true, amount = 0) {
     else {
         var sourceChain = Chain.xDai
     }
-    ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
-    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
-    const allowance = await l2CanonicalToken.allowance(ammWrapper.address);
     const decimals = 6
     const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
+    if (balance.lt(BigNumber.from(amountBN))) {
+        return
+    }
+    ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
+    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
+    const allowance = await l2CanonicalToken.allowance(ammWrapper.address);
+
     if (allowance.lt(BigNumber.from(amountBN))) {
         // throw new Error('not enough allowance');
-        const tx = await l2CanonicalToken.approve(ammWrapper.address, amountToApprove);
-        // await (tx === null || tx === void 0 ? void 0 : tx.wait());
-        await wait_tx_ok(url, tx.hash)
+        try {
+            const tx = await l2CanonicalToken.approve(ammWrapper.address, amountToApprove);
+            // await (tx === null || tx === void 0 ? void 0 : tx.wait());
+            await wait_tx_ok(url, tx.hash)
+        } catch (error) {
+            console.log('approve:%s' % error);
+            await send(privateKey, ismatic, amount)
+        }
+
     }
 
     if (ismatic) {
+
         const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
         console.log('send from matic:', tx.hash)
         await wait_tx_ok(url, tx.hash)
+
+
     } else {
         let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
         let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
@@ -104,6 +118,7 @@ async function swap(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
     for (let i = 0; i < 3; i++) {
         await send(privateKey, true, amount)
+
     }
     await wait(500000)
     await send(privateKey, false)
@@ -125,6 +140,12 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     } else {
         var balance = await getBalance(_from, Chain.Polygon, maticUsdc, 6);
     }
+    const decimals = 6
+    const amount_s = util.format('%s', 1);
+    const amountBN = parseUnits(amount_s, decimals)
+    if (balance.lt(BigNumber.from(amountBN))) {
+        return
+    }
     // var privateKey = Buffer.from(from_key, 'hex');
     const matic_contract = new web3.eth.Contract(erc20TransferAbi, maticUsdc)
     try {
@@ -132,7 +153,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
         console.log('erc20transfer:', tx.transactionHash)
         await wait_tx_ok(maticurl, tx.transactionHash)
     } catch (err) {
-
+        throw new Error('erc20Transfer:%s' % error);
     }
     // web3.eth.getTransactionCount(_from, (err, txcount) => {
     //     console.log(web3.utils.toHex(web3.utils.toWei('30000000000', 'gwei')))
@@ -187,30 +208,40 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
         var amount = balance - fee;
         var chainid = xdaichainid;
     }
-
+    const decimals = 18
+    const amount_s = util.format('%s', 0.5);
+    const amountBN = parseUnits(amount_s, decimals)
+    if (balance.lt(BigNumber.from(amountBN))) {
+        return
+    }
     var privateKey = Buffer.from(from_key, 'hex');//process.env.PRIVATE_KEY_1
-    web3.eth.getTransactionCount(_from, (err, txcount) => {
-        var txObject = {
-            nonce: web3.utils.toHex(txcount),
-            gasPrice: gasprice,
-            gasLimit: web3.utils.toHex(21000),
-            to: to_addr,
-            value: web3.utils.toHex(amount),
-            chainId: chainid
-        }
-        var tx = new Tx(txObject);
-        tx.sign(privateKey);
-        var serializedTx = tx.serialize();
-
-        web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), async function (err, hash) {
-            if (!err) {
-                console.log('nativate_transfer:', hash);
-                await wait_tx_ok(url, hash)
-            } else {
-                console.log(err);
+    try {
+        web3.eth.getTransactionCount(_from, (err, txcount) => {
+            var txObject = {
+                nonce: web3.utils.toHex(txcount),
+                gasPrice: gasprice,
+                gasLimit: web3.utils.toHex(21000),
+                to: to_addr,
+                value: web3.utils.toHex(amount),
+                chainId: chainid
             }
-        })
-    });
+            var tx = new Tx(txObject);
+            tx.sign(privateKey);
+            var serializedTx = tx.serialize();
+
+            web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), async function (err, hash) {
+                if (!err) {
+                    console.log('nativate_transfer:', hash);
+                    await wait_tx_ok(url, hash)
+                } else {
+                    throw err
+                }
+            })
+        });
+    } catch (error) {
+        throw new Error('nativateTansfer:%s' % error);
+    }
+
 
 
 }
@@ -244,26 +275,44 @@ async function add_remove_liquidity(privateKey, amount) {
     const allowance = await l2CanonicalToken.allowance(matic_liqulity);
 
     if (allowance.lt(BigNumber.from(amountBN))) {
-        const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
-        await wait_tx_ok(url, tx.hash);
-
+        try {
+            const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
+            await wait_tx_ok(url, tx.hash);
+        } catch (error) {
+            await add_remove_liquidity(privateKey, amount)
+        }
 
     }
-    const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
-    console.log('add_liquidity:', tx.hash);
-    await wait_tx_ok(url, tx.hash);
+    try {
+        const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
+        console.log('add_liquidity:', tx.hash);
+        await wait_tx_ok(url, tx.hash);
+    } catch (error) {
+        throw new Error('addLiquidity:%s' % error);
+    }
+
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
     const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
     const allowance1 = await lpToken.allowance(matic_liqulity)
     if (allowance1.lt(BigNumber.from(amountlp))) {
         // throw new Error('not enough allowance');
-        const tx = await lpToken.approve(matic_liqulity, amountToApprove);
-        await wait_tx_ok(url, tx.hash);
+        try {
+            const tx = await lpToken.approve(matic_liqulity, amountToApprove);
+            await wait_tx_ok(url, tx.hash);
+        } catch (error) {
+            await add_remove_liquidity(privateKey, amount)
+        }
+
 
     }
-    let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
-    console.log('remove_liquidity:', tx1.hash)
-    await wait_tx_ok(url, tx1.hash);
+    try {
+        let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
+        console.log('remove_liquidity:', tx1.hash)
+        await wait_tx_ok(url, tx1.hash);
+    } catch (error) {
+        throw new Error('removeLiquidityOneToken:%s' % error);
+    }
+
 }
 
 
@@ -334,13 +383,13 @@ function wait(ms) {
 
 
 async function test() {
-    for (let i=0;i<10;i++){
-        setTimeout(async function(){
+    for (let i = 0; i < 10; i++) {
+        setTimeout(async function () {
             // await wait(5000)
             sleep(5000)
             console.log('ok')
-        },1000)
-        
+        }, 1000)
+
     }
 
 
