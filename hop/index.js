@@ -268,11 +268,13 @@ async function add_remove_liquidity(privateKey, amount) {
     const decimals = 6
     const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
-    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
-    const allowance = await l2CanonicalToken.allowance(matic_liqulity);
-    if (amount < 20) {
+    const balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6);
+    if (balance.lt(BigNumber.from(amountBN))) {
+        console.log('add_remove_liquidity ignore:', signer.address)
         return
     }
+    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
+    const allowance = await l2CanonicalToken.allowance(matic_liqulity);
     if (allowance.lt(BigNumber.from(amountBN))) {
         try {
             const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
@@ -289,8 +291,14 @@ async function add_remove_liquidity(privateKey, amount) {
     } catch (error) {
         console.log(`addLiquidity:${error}`);
     }
-
+    const decimals = 6
+    const amount_s = util.format('%s', 1);
+    const amountBN = parseUnits(amount_s, decimals)
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
+    if (amountlp.lt(BigNumber.from(amountBN))) {
+        console.log('add_remove_liquidity ignore:', signer.address)
+        return
+    }
     const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
     const allowance1 = await lpToken.allowance(matic_liqulity)
     if (allowance1.lt(BigNumber.from(amountlp))) {
