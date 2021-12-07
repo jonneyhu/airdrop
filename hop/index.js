@@ -155,7 +155,7 @@ async function swap(privateKey, amount) {
 }
 
 async function erc20Transfer(from_key, to_addr, amount = 0) {
-    const maticurl = "https://rpc-mainnet.matic.quiknode.pro";
+    const maticurl = "https://polygon-rpc.com";
     const maticchainid = 0x89;
     const provider = new HDWalletProvider(from_key, maticurl)
     const web3 = new Web3(provider);
@@ -193,7 +193,7 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
     //将from的原生代币和usdc全部转给to地址　先转usdc再转原生代币（手续费）
     const xdaiurl = 'https://rpc.xdaichain.com/';
     const xdaichainid = 0x64;
-    const maticurl = "https://rpc-mainnet.matic.quiknode.pro";
+    const maticurl = "https://polygon-rpc.com";
     const maticchainid = 0x89;
     const fee = 0.0015 * (Math.pow(10, 18));
     if (ismatic) {
