@@ -75,7 +75,7 @@ async function wait_tx_ok(url, hash) {
 async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         var url = 'https://polygon-rpc.com';
-        
+
     } else {
         var url = 'https://rpc.xdaichain.com/';
     }
@@ -93,10 +93,10 @@ async function send(privateKey, ismatic = true, amount = 0) {
         var balance = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
     }
     const decimals = 6
-    const amount_s = util.format('%s', amount);
+    const amount_s = util.format('%s', 12);
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
-        console.log('ignore:',signer.address)
+        console.log('ignore:', signer.address)
         return
     }
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
@@ -117,28 +117,28 @@ async function send(privateKey, ismatic = true, amount = 0) {
     }
 
     if (ismatic) {
-        try{
+        try {
             const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
             console.log('send from matic:', tx.hash)
             await wait_tx_ok(url, tx.hash)
-        }catch(error){
+        } catch (error) {
             console.log(`matic send:${error}`);
             await send(privateKey, ismatic, amount)
         }
-        
+
 
 
     } else {
-        try{
+        try {
             let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
             let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
             console.log('send from xdai', tx2.hash);
             await wait_tx_ok(url, tx2.hash)
-        }catch(error){
+        } catch (error) {
             console.log(`xdai send:${error}`);
             await send(privateKey, ismatic, amount)
         }
-        
+
     }
 
 }
@@ -173,7 +173,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     const amount_s = util.format('%s', 1);
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
-        console.log('erc20transfer ignore:',signer.address)
+        console.log('erc20transfer ignore:', signer.address)
         return
     }
     // var privateKey = Buffer.from(from_key, 'hex');
@@ -185,7 +185,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     } catch (err) {
         throw new Error('erc20Transfer:%s' % err);
     }
-    
+
 
 }
 
@@ -221,7 +221,7 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
     const amount_s = util.format('%s', 0.5);
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
-        console.log('nativatetransfer ignore:',signer.address)
+        console.log('nativatetransfer ignore:', signer.address)
         return
     }
     var privateKey = Buffer.from(from_key, 'hex');//process.env.PRIVATE_KEY_1
@@ -249,7 +249,7 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
             })
         });
     } catch (error) {
-        throw new Error(`nativateTansfer:${error}` );
+        throw new Error(`nativateTansfer:${error}`);
     }
 
 
@@ -270,7 +270,7 @@ async function add_remove_liquidity(privateKey, amount) {
     const amountBN = parseUnits(amount_s, decimals)
     const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
     const allowance = await l2CanonicalToken.allowance(matic_liqulity);
-    if(amount<20){
+    if (amount < 20) {
         return
     }
     if (allowance.lt(BigNumber.from(amountBN))) {
@@ -379,10 +379,10 @@ function wait(ms) {
 };
 
 
-async function test(privateKey,ismatic=true,amount=0) {
+async function test(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         var url = 'https://polygon-rpc.com';
-        
+
     } else {
         var url = 'https://rpc.xdaichain.com/';
     }
@@ -403,7 +403,7 @@ async function test(privateKey,ismatic=true,amount=0) {
     const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
-        console.log(balance.toString(),amountBN.toString())
+        console.log(balance.toString(), amountBN.toString())
         return
     }
 
