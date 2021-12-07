@@ -97,7 +97,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
     const amountBN = parseUnits(amount_s, decimals)
     if (balance.lt(BigNumber.from(amountBN))) {
         console.log('ignore:', signer.address)
-        return
+        return false
     }
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
     const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
@@ -110,8 +110,16 @@ async function send(privateKey, ismatic = true, amount = 0) {
             // await (tx === null || tx === void 0 ? void 0 : tx.wait());
             await wait_tx_ok(url, tx.hash)
         } catch (error) {
-            console.log(`approve:${error}`);
-            await send(privateKey, ismatic, amount)
+            console.log(`send approve:${error}`);
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const tx = await l2CanonicalToken.approve(ammWrapper.address, amountToApprove);
+                    await wait_tx_ok(url, tx.hash)
+                    break
+                } catch (err) {
+
+                }
+            }
         }
 
     }
@@ -123,24 +131,43 @@ async function send(privateKey, ismatic = true, amount = 0) {
             await wait_tx_ok(url, tx.hash)
         } catch (error) {
             console.log(`matic send:${error}`);
-            await send(privateKey, ismatic, amount)
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
+                    console.log('send from matic:', tx.hash)
+                    await wait_tx_ok(url, tx.hash)
+                    break
+                } catch (err) {
+
+                }
+            }
         }
 
 
 
     } else {
         try {
-            let amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
-            let tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
+            const amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
+            const tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
             console.log('send from xdai', tx2.hash);
             await wait_tx_ok(url, tx2.hash)
         } catch (error) {
             console.log(`xdai send:${error}`);
-            await send(privateKey, ismatic, amount)
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
+                    const tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
+                    console.log('send from xdai', tx2.hash);
+                    await wait_tx_ok(url, tx2.hash)
+                    break
+                } catch (err) {
+
+                }
+            }
         }
 
     }
-
+    return true
 }
 
 async function swap(privateKey, amount) {
@@ -149,9 +176,9 @@ async function swap(privateKey, amount) {
         await send(privateKey, true, amount)
 
     }
-    await wait(500000)
+    await wait(600000)
     await send(privateKey, false)
-    await wait(500000)
+    await wait(600000)
 }
 
 async function erc20Transfer(from_key, to_addr, amount = 0) {
@@ -169,7 +196,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     } else {
         var balance = await getBalance(_from, Chain.Polygon, maticUsdc, 6);
     }
-    
+
     const amountBN1 = parseUnits(util.format('%s', 1), 6)
     if (balance.lt(BigNumber.from(amountBN1))) {
         console.log('erc20transfer ignore:', signer.address)
@@ -277,7 +304,16 @@ async function add_remove_liquidity(privateKey, amount) {
             const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
             await wait_tx_ok(url, tx.hash);
         } catch (error) {
-            await add_remove_liquidity(privateKey, amount)
+            console.log(`add liquidity approve:${error}`)
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
+                    await wait_tx_ok(url, tx.hash);
+                    break
+                } catch (err) {
+
+                }
+            }
         }
 
     }
@@ -287,6 +323,17 @@ async function add_remove_liquidity(privateKey, amount) {
         await wait_tx_ok(url, tx.hash);
     } catch (error) {
         console.log(`addLiquidity:${error}`);
+        for (let i = 0; i < 5; i++) {
+            try {
+                const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
+                console.log('add_liquidity:', tx.hash);
+                await wait_tx_ok(url, tx.hash);
+                break
+            } catch (err) {
+
+            }
+        }
+
     }
     const amountBN1 = parseUnits(util.format('%s', 1), 6)
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
@@ -302,7 +349,16 @@ async function add_remove_liquidity(privateKey, amount) {
             const tx = await lpToken.approve(matic_liqulity, amountToApprove);
             await wait_tx_ok(url, tx.hash);
         } catch (error) {
-            await add_remove_liquidity(privateKey, amount)
+            for (let i = 0; i < 5; i++) {
+                console.log(`remove liquidity approve:${error}`)
+                try {
+                    const tx = await lpToken.approve(matic_liqulity, amountToApprove);
+                    await wait_tx_ok(url, tx.hash);
+                    break
+                } catch (err) {
+
+                }
+            }
         }
     }
     try {
@@ -310,7 +366,16 @@ async function add_remove_liquidity(privateKey, amount) {
         console.log('remove_liquidity:', tx1.hash)
         await wait_tx_ok(url, tx1.hash);
     } catch (error) {
-        throw new Error(`removeLiquidityOneToken:${error}`);
+        for (let i = 0; i < 5; i++) {
+            try {
+                let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
+                console.log('remove_liquidity:', tx1.hash)
+                await wait_tx_ok(url, tx1.hash);
+                break
+            } catch (err) {
+
+            }
+        }
     }
 
 }
