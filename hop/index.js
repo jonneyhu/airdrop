@@ -169,10 +169,9 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     } else {
         var balance = await getBalance(_from, Chain.Polygon, maticUsdc, 6);
     }
-    const decimals = 6
-    const amount_s = util.format('%s', 1);
-    const amountBN = parseUnits(amount_s, decimals)
-    if (balance.lt(BigNumber.from(amountBN))) {
+    
+    const amountBN1 = parseUnits(util.format('%s', 1), 6)
+    if (balance.lt(BigNumber.from(amountBN1))) {
         console.log('erc20transfer ignore:', signer.address)
         return
     }
@@ -217,10 +216,8 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
         var amount = balance - fee;
         var chainid = xdaichainid;
     }
-    const decimals = 18
-    const amount_s = util.format('%s', 0.5);
-    const amountBN = parseUnits(amount_s, decimals)
-    if (balance.lt(BigNumber.from(amountBN))) {
+    const amountBN1 = parseUnits(util.format('%s', 0.5), 18)
+    if (balance.lt(BigNumber.from(amountBN1))) {
         console.log('nativatetransfer ignore:', signer.address)
         return
     }
@@ -291,11 +288,9 @@ async function add_remove_liquidity(privateKey, amount) {
     } catch (error) {
         console.log(`addLiquidity:${error}`);
     }
-    const decimals = 6
-    const amount_s = util.format('%s', 1);
-    const amountBN = parseUnits(amount_s, decimals)
+    const amountBN1 = parseUnits(util.format('%s', 1), 6)
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
-    if (amountlp.lt(BigNumber.from(amountBN))) {
+    if (amountlp.lt(BigNumber.from(amountBN1))) {
         console.log('add_remove_liquidity ignore:', signer.address)
         return
     }
