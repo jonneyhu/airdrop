@@ -172,13 +172,29 @@ async function send(privateKey, ismatic = true, amount = 0) {
 
 async function swap(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
-    for (let i = 0; i < 3; i++) {
-        await send(privateKey, true, amount)
-
+  
+    var url = 'https://polygon-rpc.com';
+    const provider = new providers.JsonRpcProvider(url)
+    const signer = new Wallet(privateKey, provider)
+    let balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
+    if (balance.lt(parseUnits(util.format('%s', 12), 6))){
+        console.log('matic send ignore',signer.address)
+    }else{
+        for (let i = 0; i < 3; i++) {
+            await send(privateKey, true, amount)
+        }
+        await wait(600000)
     }
-    await wait(600000)
-    await send(privateKey, false)
-    await wait(600000)
+    var url1 = 'https://rpc.xdaichain.com/';
+    const provider1 = new providers.JsonRpcProvider(url1)
+    const signer1 = new Wallet(privateKey, provider1)
+    let balance1 = await getBalance(signer1.address, Chain.Polygon, maticUsdc, 6)
+    if (balance1.lt(parseUnits(util.format('%s', 1), 6))){
+        console.log('xdai send ignore',signer.address)
+    }else{
+        await send(privateKey, false)
+        await wait(600000)
+    }
 }
 
 async function erc20Transfer(from_key, to_addr, amount = 0) {
@@ -209,7 +225,15 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
         console.log('erc20transfer:', tx.transactionHash)
         await wait_tx_ok(maticurl, tx.transactionHash)
     } catch (err) {
-        throw new Error('erc20Transfer:%s' % err);
+        console.log(`erc20transfer:${error}`)
+        for (let i = 0; i < 5; i++) {
+            try {
+                await erc20transfer(from_key, to_addr, amount)
+                break
+            } catch (err) {
+
+            }
+        }
     }
 
 
@@ -273,7 +297,15 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
             })
         });
     } catch (error) {
-        throw new Error(`nativateTansfer:${error}`);
+        console.log(`nativateTansfer:${error}`)
+        for (let i = 0; i < 5; i++) {
+            try {
+                await nativateTansfer(from_key, to_addr, ismatic)
+                break
+            } catch (err) {
+
+            }
+        }
     }
 
 
