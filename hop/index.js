@@ -87,16 +87,17 @@ async function send(privateKey, ismatic = true, amount = 0) {
     if (ismatic) {
         var sourceChain = Chain.Polygon
         var balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
+        var nativate_balance = await getBalance(signer.address, Chain.Polygon)
     }
     else {
         var sourceChain = Chain.xDai
         var balance = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
+        var nativate_balance = await getBalance(signer.address, Chain.xDai)
     }
     const decimals = 6
     const amount_s = util.format('%s', 12);
     const amountBN = parseUnits(amount_s, decimals)
-    if (balance.lt(BigNumber.from(amountBN))) {
-        console.log('ignore:', signer.address)
+    if (balance.lt(BigNumber.from(amountBN)) || nativate_balance.lt(parseUnits(util.format('%s', 0.5), 18))) {
         return false
     }
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
@@ -110,8 +111,8 @@ async function send(privateKey, ismatic = true, amount = 0) {
             // await (tx === null || tx === void 0 ? void 0 : tx.wait());
             await wait_tx_ok(url, tx.hash)
         } catch (error) {
-            console.log(`send approve:${error}`);
-            for (let i = 0; i < 5; i++) {
+            console.log(`${signer.address} send approve:${error}`);
+            for (let i = 0; i < 4; i++) {
                 try {
                     const tx = await l2CanonicalToken.approve(ammWrapper.address, amountToApprove);
                     await wait_tx_ok(url, tx.hash)
@@ -130,8 +131,8 @@ async function send(privateKey, ismatic = true, amount = 0) {
             console.log('send from matic:', tx.hash)
             await wait_tx_ok(url, tx.hash)
         } catch (error) {
-            console.log(`matic send:${error}`);
-            for (let i = 0; i < 5; i++) {
+            console.log(`${signer.address} matic send:${error}`);
+            for (let i = 0; i < 4; i++) {
                 try {
                     const tx = await bridge.send(amountBN, Chain.Polygon, Chain.xDai)
                     console.log('send from matic:', tx.hash)
@@ -152,8 +153,8 @@ async function send(privateKey, ismatic = true, amount = 0) {
             console.log('send from xdai', tx2.hash);
             await wait_tx_ok(url, tx2.hash)
         } catch (error) {
-            console.log(`xdai send:${error}`);
-            for (let i = 0; i < 5; i++) {
+            console.log(`${signer.address} xdai send:${error}`);
+            for (let i = 0; i < 4; i++) {
                 try {
                     const amountBN1 = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
                     const tx2 = await bridge.send(amountBN1, Chain.xDai, Chain.Polygon);
@@ -172,14 +173,14 @@ async function send(privateKey, ismatic = true, amount = 0) {
 
 async function swap(privateKey, amount) {
     // const privateKey = process.env.PRIVATE_KEY
-  
+
     var url = 'https://polygon-rpc.com';
     const provider = new providers.JsonRpcProvider(url)
     const signer = new Wallet(privateKey, provider)
     let balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
-    if (balance.lt(parseUnits(util.format('%s', 12), 6))){
-        console.log('matic send ignore',signer.address)
-    }else{
+    if (balance.lt(parseUnits(util.format('%s', 12), 6))) {
+        console.log('matic send ignore', signer.address)
+    } else {
         for (let i = 0; i < 3; i++) {
             await send(privateKey, true, amount)
         }
@@ -189,9 +190,9 @@ async function swap(privateKey, amount) {
     const provider1 = new providers.JsonRpcProvider(url1)
     const signer1 = new Wallet(privateKey, provider1)
     let balance1 = await getBalance(signer1.address, Chain.Polygon, maticUsdc, 6)
-    if (balance1.lt(parseUnits(util.format('%s', 1), 6))){
-        console.log('xdai send ignore',signer.address)
-    }else{
+    if (balance1.lt(parseUnits(util.format('%s', 1), 6))) {
+        console.log('xdai send ignore', signer.address)
+    } else {
         await send(privateKey, false)
         await wait(600000)
     }
@@ -212,9 +213,9 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     } else {
         var balance = await getBalance(_from, Chain.Polygon, maticUsdc, 6);
     }
-
+    var nativate_balance = await getBalance(signer.address, Chain.Polygon)
     const amountBN1 = parseUnits(util.format('%s', 1), 6)
-    if (balance.lt(BigNumber.from(amountBN1))) {
+    if (balance.lt(BigNumber.from(amountBN1))|| nativate_balance.lt(parseUnits(util.format('%s', 0.5), 18))) {
         console.log('erc20transfer ignore:', signer.address)
         return
     }
@@ -225,8 +226,8 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
         console.log('erc20transfer:', tx.transactionHash)
         await wait_tx_ok(maticurl, tx.transactionHash)
     } catch (err) {
-        console.log(`erc20transfer:${error}`)
-        for (let i = 0; i < 5; i++) {
+        console.log(`${signer.address} erc20transfer:${err}`)
+        for (let i = 0; i < 4; i++) {
             try {
                 await erc20transfer(from_key, to_addr, amount)
                 break
@@ -297,8 +298,8 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
             })
         });
     } catch (error) {
-        console.log(`nativateTansfer:${error}`)
-        for (let i = 0; i < 5; i++) {
+        console.log(`${signer.address} nativateTansfer:${error}`)
+        for (let i = 0; i < 4; i++) {
             try {
                 await nativateTansfer(from_key, to_addr, ismatic)
                 break
@@ -325,7 +326,8 @@ async function add_remove_liquidity(privateKey, amount) {
     const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
     const balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6);
-    if (balance.lt(BigNumber.from(amountBN))) {
+    var nativate_balance = await getBalance(signer.address, Chain.Polygon)
+    if (balance.lt(BigNumber.from(amountBN))|| nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
         console.log('add_remove_liquidity ignore:', signer.address)
         return
     }
@@ -336,7 +338,7 @@ async function add_remove_liquidity(privateKey, amount) {
             const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
             await wait_tx_ok(url, tx.hash);
         } catch (error) {
-            console.log(`add liquidity approve:${error}`)
+            console.log(`${signer.address} add liquidity approve:${error}`)
             for (let i = 0; i < 5; i++) {
                 try {
                     const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
@@ -354,8 +356,8 @@ async function add_remove_liquidity(privateKey, amount) {
         console.log('add_liquidity:', tx.hash);
         await wait_tx_ok(url, tx.hash);
     } catch (error) {
-        console.log(`addLiquidity:${error}`);
-        for (let i = 0; i < 5; i++) {
+        console.log(`${signer.address} addLiquidity:${error}`);
+        for (let i = 0; i < 4; i++) {
             try {
                 const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
                 console.log('add_liquidity:', tx.hash);
@@ -382,7 +384,7 @@ async function add_remove_liquidity(privateKey, amount) {
             await wait_tx_ok(url, tx.hash);
         } catch (error) {
             for (let i = 0; i < 5; i++) {
-                console.log(`remove liquidity approve:${error}`)
+                console.log(`${signer.address} remove liquidity approve:${error}`)
                 try {
                     const tx = await lpToken.approve(matic_liqulity, amountToApprove);
                     await wait_tx_ok(url, tx.hash);
@@ -399,6 +401,7 @@ async function add_remove_liquidity(privateKey, amount) {
         await wait_tx_ok(url, tx1.hash);
     } catch (error) {
         for (let i = 0; i < 5; i++) {
+            console.log(`${signer.address} remove liquidity :${error}`)
             try {
                 let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
                 console.log('remove_liquidity:', tx1.hash)
