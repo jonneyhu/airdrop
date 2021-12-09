@@ -418,25 +418,26 @@ async function add_remove_liquidity(privateKey, amount) {
 
 async function once(lines, num) {
 
-    for (var i = 0; i < lines.length; i++) {
+    for (var i = 0; i < lines.length-1; i++) {
         let item = lines[i];
         let line = item.split(" ");
         let addr = line[0];
         let key = line[1];
         let item2 = lines[i + 1];
+        console.log(i)
         let to_addr = item2.split(" ")[0];
+        console.log(to_addr)
+        // try {
+        //     await swap(key, 12);
+        //     await add_remove_liquidity(key, 20);
+        //     await erc20Transfer(key, to_addr);
+        //     await nativateTansfer(key, to_addr)
+        //     await nativateTansfer(key, to_addr, true)
 
-        try {
-            await swap(key, 12);
-            await add_remove_liquidity(key, 20);
-            await erc20Transfer(key, to_addr);
-            await nativateTansfer(key, to_addr)
-            await nativateTansfer(key, to_addr, true)
-
-        } catch (error) {
-            console.log(num, i)
-            throw error
-        }
+        // } catch (error) {
+        //     console.log(num, i)
+        //     throw error
+        // }
     }
 
 }
