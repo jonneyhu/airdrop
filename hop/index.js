@@ -482,8 +482,7 @@ function wait(ms) {
     return new Promise(resolve => setTimeout(() => resolve(), ms));
 };
 
-
-async function test(privateKey, ismatic = true, amount = 0) {
+async function test1(addr,ismatic){
     if (ismatic) {
         var url = 'https://polygon-rpc.com';
 
@@ -491,34 +490,79 @@ async function test(privateKey, ismatic = true, amount = 0) {
         var url = 'https://rpc.xdaichain.com/';
     }
 
-    const provider = new providers.JsonRpcProvider(url)
-    const signer = new Wallet(privateKey, provider)
-    const hop = new Hop('mainnet', signer)
-    const bridge = hop.connect(signer).bridge('USDC')
+    // const provider = new providers.JsonRpcProvider(url)
+    // const signer = new Wallet(privateKey, provider)
+    // const hop = new Hop('mainnet', signer)
+    // const bridge = hop.connect(signer).bridge('USDC')
     if (ismatic) {
-        var sourceChain = Chain.Polygon
-        var balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
+      
+        var balance = await getBalance(addr, Chain.Polygon, maticUsdc, 6)
+        var nativate_balance = await getBalance(addr,Chain.Polygon)
+        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))||nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))){
+            console.log('matic:',addr)
+        }
+     
     }
     else {
-        var sourceChain = Chain.xDai
-        var balance = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
+        
+        var balance = await getBalance(addr, Chain.xDai, xdaiUsdc, 6)
+        var nativate_balance = await getBalance(addr,Chain.xDai)
+        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))||nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))){
+            console.log('xdai:',addr)
+        }
     }
-    const decimals = 6
-    const amount_s = util.format('%s', amount);
-    const amountBN = parseUnits(amount_s, decimals)
-    if (balance.lt(BigNumber.from(amountBN))) {
-        console.log(balance.toString(), amountBN.toString())
-        return
-    }
-
-
 }
+
+async function test(lines) {
+    for (var i = 0; i < lines.length-1; i++) {
+        let item = lines[i];
+        let line = item.split(" ");
+        let addr = line[0];
+        await test1(addr,true)
+        await test1(addr,false)
+    }
+ 
+   
+    
+}
+
+async function check(){
+     let data = fs.readFileSync("key.txt", "utf-8");
+    const lines = data.split(/\r?\n/);
+    var line1 = lines.slice(12, 52);
+    var line2 = lines.slice(52, 92);
+    var line3 = lines.slice(92, 132);
+    var line4 = lines.slice(132, 172);
+    var line5 = lines.slice(172, 212);
+    var res = [line1, line2, line3, line4, line5];
+    var initial = [
+        '0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555 57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',
+        '0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365 70e5fbb405e7efabc47d678f3454555ae9b968fa119d8122fd5a2000eba2100d',
+        '0xf4bcCeACcFE4a32B72715BaC6337DB63F6e07869 cc042762a0cfd5a25595bb1f6abc266d8048ab6b432a30a96db3f0e23857f628',
+        '0x1714eF9f6392ca42D069AD7F46Cd63B2bc183764 3fe98e7c9017a295b0c6236715b66d56839d482968425b5527fffc39ab1e16d6',
+        '0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2 b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46'
+    ]
+    for (let i = 0; i < res.length; i++) {
+        res[i].unshift(initial[i]);
+        setTimeout(async function () {
+            try {
+                await test(res[i])
+            } catch (error) {
+
+                console.log(i, error)
+            }
+
+        }, 1)
+    }
+}
+
 // swap('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',2)
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
 // add_remove_liquidity('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', 1)
-main()
+// main()
 // erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
 // nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
 // send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', false)
 // test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false,10)
+check()
