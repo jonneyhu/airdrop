@@ -394,7 +394,7 @@ async function add_remove_liquidity(privateKey, amount) {
     }
     const amountBN1 = parseUnits(util.format('%s', 1), 6)
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
-    if (amountlp.lt(BigNumber.from(amountBN1))) {
+    if (amountlp.lt(amountBN1)) {
         console.log('add_remove_liquidity ignore:', signer.address)
         return
     }
@@ -404,13 +404,13 @@ async function add_remove_liquidity(privateKey, amount) {
     }
     const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
     const allowance1 = await lpToken.allowance(matic_liqulity)
-    if (allowance1.lt(BigNumber.from(amountlp))) {
+    if (allowance1.lt(amountlp)) {
         // throw new Error('not enough allowance');
         try {
             const tx = await lpToken.approve(matic_liqulity, amountToApprove);
             await wait_tx_ok(url, tx.hash);
         } catch (error) {
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 4; i++) {
                 console.log(`${signer.address} remove liquidity approve:${error}`)
                 try {
                     const tx = await lpToken.approve(matic_liqulity, amountToApprove);
@@ -427,7 +427,7 @@ async function add_remove_liquidity(privateKey, amount) {
         console.log('remove_liquidity:', tx1.hash)
         await wait_tx_ok(url, tx1.hash);
     } catch (error) {
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 3; i++) {
             console.log(`${signer.address} remove liquidity :${error}`)
             try {
                 let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
@@ -461,6 +461,7 @@ async function once(lines, num) {
 
         } catch (error) {
             console.log(num, i)
+            console.log(error)
         }
     }
 
