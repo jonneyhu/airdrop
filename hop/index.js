@@ -18,17 +18,23 @@ const amountToApprove = constants.MaxUint256
 
 
 async function getBalance(addr, chain, contract = '', decimals = 18) {
-    if (contract == '') {
-        const token = new Token('mainnet', chain, maticUsdc, decimals)
-        const balance = await token.getNativeTokenBalance(addr);
-
-        return balance;
-    } else {
-        const token = new Token('mainnet', chain, contract, decimals)
-        const balance = await token.balanceOf(addr);
-
-        return balance;
+    try{
+        if (contract == '') {
+            const token = new Token('mainnet', chain, maticUsdc, decimals)
+            const balance = await token.getNativeTokenBalance(addr);
+    
+            return balance;
+        } else {
+            const token = new Token('mainnet', chain, contract, decimals)
+            const balance = await token.balanceOf(addr);
+    
+            return balance;
+        }
+    }catch(err){
+        console.log(`getbalance ${err}`);
+        await getBalance(addr,chain,contract,decimals)
     }
+   
 
 }
 const erc20TransferAbi = [{
@@ -187,7 +193,7 @@ async function swap(privateKey, amount) {
     const provider = new providers.JsonRpcProvider(url)
     const signer = new Wallet(privateKey, provider)
     let balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6)
-    if (balance.lt(parseUnits(util.format('%s', 12), 6))) {
+    if (balance.lt(parseUnits(util.format('%s', 1), 6))) {
         console.log('matic send ignore', signer.address)
     } else {
         for (let i = 0; i < 3; i++) {
@@ -312,12 +318,12 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0,de
             web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), async function (err, hash) {
                 if (!err) {
                     console.log('nativate_transfer:', hash);
-                    if (sleep>0){
+                    if (delay>0){
                         sleep(delay)
                     }
                     await wait_tx_ok(url, hash)
                 } else {
-                    console.log(`${signer.address} nativateTansfer11:${error}`)
+                    console.log(`${signer.address} nativateTansfer11:${err}`)
                     throw err
                 }
             })
