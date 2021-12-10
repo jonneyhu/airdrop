@@ -97,7 +97,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
     const decimals = 6
     const amount_s = util.format('%s', 12);
     const amountBN = parseUnits(amount_s, decimals)
-    if (balance.lt(BigNumber.from(amountBN)) || nativate_balance.lt(parseUnits(util.format('%s', 0.5), 18))) {
+    if (balance.lt(BigNumber.from(amountBN)) || nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
         return false
     }
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
@@ -189,7 +189,7 @@ async function swap(privateKey, amount) {
     var url1 = 'https://rpc.xdaichain.com/';
     const provider1 = new providers.JsonRpcProvider(url1)
     const signer1 = new Wallet(privateKey, provider1)
-    let balance1 = await getBalance(signer1.address, Chain.Polygon, maticUsdc, 6)
+    let balance1 = await getBalance(signer1.address, Chain.xDai, xdaiUsdc, 6)
     if (balance1.lt(parseUnits(util.format('%s', 1), 6))) {
         console.log('xdai send ignore', signer.address)
     } else {
@@ -215,7 +215,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     }
     var nativate_balance = await getBalance(signer.address, Chain.Polygon)
     const amountBN1 = parseUnits(util.format('%s', 1), 6)
-    if (balance.lt(BigNumber.from(amountBN1))|| nativate_balance.lt(parseUnits(util.format('%s', 0.5), 18))) {
+    if (balance.lt(BigNumber.from(amountBN1)) || nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
         console.log('erc20transfer ignore:', signer.address)
         return
     }
@@ -327,47 +327,49 @@ async function add_remove_liquidity(privateKey, amount) {
     const amountBN = parseUnits(amount_s, decimals)
     const balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6);
     var nativate_balance = await getBalance(signer.address, Chain.Polygon)
-    if (balance.lt(BigNumber.from(amountBN))|| nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+    if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
         console.log('add_remove_liquidity ignore:', signer.address)
         return
     }
-    const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
-    const allowance = await l2CanonicalToken.allowance(matic_liqulity);
-    if (allowance.lt(BigNumber.from(amountBN))) {
+    if (balance.gt(BigNumber.from(amountBN))){
+        const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
+        const allowance = await l2CanonicalToken.allowance(matic_liqulity);
+        if (allowance.lt(BigNumber.from(amountBN))) {
+            try {
+                const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
+                await wait_tx_ok(url, tx.hash);
+            } catch (error) {
+                console.log(`${signer.address} add liquidity approve:${error}`)
+                for (let i = 0; i < 5; i++) {
+                    try {
+                        const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
+                        await wait_tx_ok(url, tx.hash);
+                        break
+                    } catch (err) {
+
+                    }
+                }
+            }
+
+        }
         try {
-            const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
+            const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
+            console.log('add_liquidity:', tx.hash);
             await wait_tx_ok(url, tx.hash);
         } catch (error) {
-            console.log(`${signer.address} add liquidity approve:${error}`)
-            for (let i = 0; i < 5; i++) {
+            console.log(`${signer.address} addLiquidity:${error}`);
+            for (let i = 0; i < 4; i++) {
                 try {
-                    const tx = await l2CanonicalToken.approve(matic_liqulity, amountToApprove);
+                    const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
+                    console.log('add_liquidity:', tx.hash);
                     await wait_tx_ok(url, tx.hash);
                     break
                 } catch (err) {
 
                 }
             }
+
         }
-
-    }
-    try {
-        const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
-        console.log('add_liquidity:', tx.hash);
-        await wait_tx_ok(url, tx.hash);
-    } catch (error) {
-        console.log(`${signer.address} addLiquidity:${error}`);
-        for (let i = 0; i < 4; i++) {
-            try {
-                const tx = await bridge.addLiquidity(amountBN, '0', Chain.Polygon);
-                console.log('add_liquidity:', tx.hash);
-                await wait_tx_ok(url, tx.hash);
-                break
-            } catch (err) {
-
-            }
-        }
-
     }
     const amountBN1 = parseUnits(util.format('%s', 1), 6)
     let amountlp = await getBalance(signer.address, Chain.Polygon, usdcLp, 6);
@@ -400,7 +402,7 @@ async function add_remove_liquidity(privateKey, amount) {
         console.log('remove_liquidity:', tx1.hash)
         await wait_tx_ok(url, tx1.hash);
     } catch (error) {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 4; i++) {
             console.log(`${signer.address} remove liquidity :${error}`)
             try {
                 let tx1 = await bridge.removeLiquidityOneToken(amountlp, 0, Chain.Polygon)
@@ -418,26 +420,23 @@ async function add_remove_liquidity(privateKey, amount) {
 
 async function once(lines, num) {
 
-    for (var i = 0; i < lines.length-1; i++) {
+    for (var i = 0; i < lines.length - 1; i++) {
         let item = lines[i];
         let line = item.split(" ");
         let addr = line[0];
         let key = line[1];
         let item2 = lines[i + 1];
-        console.log(i)
         let to_addr = item2.split(" ")[0];
-        console.log(to_addr)
-        // try {
-        //     await swap(key, 12);
-        //     await add_remove_liquidity(key, 20);
-        //     await erc20Transfer(key, to_addr);
-        //     await nativateTansfer(key, to_addr)
-        //     await nativateTansfer(key, to_addr, true)
+        try {
+            await swap(key, 12);
+            await add_remove_liquidity(key, 20);
+            await erc20Transfer(key, to_addr);
+            await nativateTansfer(key, to_addr)
+            await nativateTansfer(key, to_addr, true)
 
-        // } catch (error) {
-        //     console.log(num, i)
-        //     throw error
-        // }
+        } catch (error) {
+            console.log(num, i)
+        }
     }
 
 }
@@ -482,7 +481,7 @@ function wait(ms) {
     return new Promise(resolve => setTimeout(() => resolve(), ms));
 };
 
-async function test1(addr,ismatic){
+async function test1(addr, ismatic, j) {
     if (ismatic) {
         var url = 'https://polygon-rpc.com';
 
@@ -495,39 +494,50 @@ async function test1(addr,ismatic){
     // const hop = new Hop('mainnet', signer)
     // const bridge = hop.connect(signer).bridge('USDC')
     if (ismatic) {
-      
+
         var balance = await getBalance(addr, Chain.Polygon, maticUsdc, 6)
-        var nativate_balance = await getBalance(addr,Chain.Polygon)
-        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))||nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))){
-            console.log('matic:',addr)
+        var nativate_balance = await getBalance(addr, Chain.Polygon)
+        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))) {
+            console.log(`${j} matic usdc:${balance.toString()}-${addr}`)
         }
-     
+        if (nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))) {
+            console.log(`${j} matic nativate:${nativate_balance.toString()}-${addr}`)
+        }
+
     }
     else {
-        
+
         var balance = await getBalance(addr, Chain.xDai, xdaiUsdc, 6)
-        var nativate_balance = await getBalance(addr,Chain.xDai)
-        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))||nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))){
-            console.log('xdai:',addr)
+        var nativate_balance = await getBalance(addr, Chain.xDai)
+        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))) {
+            console.log(`${j} xdai usdc:${balance.toString()}-${addr}`)
+        }
+        if (nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))) {
+            console.log(`${j} xdai nativate:${nativate_balance.toString()}-${addr}`)
         }
     }
 }
 
-async function test(lines) {
-    for (var i = 0; i < lines.length-1; i++) {
+async function test(lines, j) {
+    for (var i = 0; i < lines.length - 1; i++) {
         let item = lines[i];
         let line = item.split(" ");
         let addr = line[0];
-        await test1(addr,true)
-        await test1(addr,false)
+        await test1(addr, true, j)
+        await test1(addr, false, j)
+        const amountBN1 = parseUnits(util.format('%s', 1), 6)
+        let amountlp = await getBalance(addr, Chain.Polygon, usdcLp, 6);
+        if (amountlp.gt(BigNumber.from(amountBN1))) {
+            console.log(`lptoken ${amountlp.toString()}-${addr}`)
+        }
     }
- 
-   
-    
+
+
+
 }
 
-async function check(){
-     let data = fs.readFileSync("key.txt", "utf-8");
+async function check() {
+    let data = fs.readFileSync("key.txt", "utf-8");
     const lines = data.split(/\r?\n/);
     var line1 = lines.slice(12, 52);
     var line2 = lines.slice(52, 92);
@@ -546,7 +556,7 @@ async function check(){
         res[i].unshift(initial[i]);
         setTimeout(async function () {
             try {
-                await test(res[i])
+                await test(res[i], i)
             } catch (error) {
 
                 console.log(i, error)
@@ -560,9 +570,9 @@ async function check(){
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
 // add_remove_liquidity('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', 1)
-// main()
+main()
 // erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
 // nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
 // send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', false)
 // test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false,10)
-check()
+// check()
