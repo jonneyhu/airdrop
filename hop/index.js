@@ -109,6 +109,7 @@ async function send(privateKey, ismatic = true, amount = 0) {
     }
     if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
         if (ismatic) {
+            console.log(`send ${nativate_balance.toString()} ${parseUnits(util.format('%s', 0.1), 18)}`)
             await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
         } else {
             await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, false, 0.1,10000)
@@ -274,9 +275,9 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0,de
         var _from = signer.address;
         var balance = await getBalance(_from, Chain.Polygon)
         if (amount == 0) {
-            amount = balance - fee;
+            var amount1 = balance - fee;
         } else {
-            amount = amount * (Math.pow(10, 18));
+            var amount1 = amount * (Math.pow(10, 18));
         }
 
         var chainid = maticchainid;
@@ -289,9 +290,9 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0,de
         var _from = signer.address;
         var balance = await getBalance(_from, Chain.xDai)
         if (amount == 0) {
-            amount = balance - fee;
+            var amount1 = balance - fee;
         } else {
-            amount = amount * (Math.pow(10, 18));
+            var amount1 = amount * (Math.pow(10, 18));
         }
         var chainid = xdaichainid;
     }
@@ -308,7 +309,7 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0,de
                 gasPrice: gasprice,
                 gasLimit: web3.utils.toHex(21000),
                 to: to_addr,
-                value: web3.utils.toHex(amount),
+                value: web3.utils.toHex(amount1),
                 chainId: chainid
             }
             var tx = new Tx(txObject);
@@ -332,7 +333,7 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0,de
         console.log(`${signer.address} nativateTansfer:${error}`)
         for (let i = 0; i < 4; i++) {
             try {
-                await nativateTansfer(from_key, to_addr, ismatic)
+                await nativateTansfer(from_key, to_addr, ismatic,amount,delay)
                 break
             } catch (err) {
 
@@ -427,7 +428,7 @@ async function add_remove_liquidity(privateKey, amount) {
                     await wait_tx_ok(url, tx.hash);
                     break
                 } catch (err) {
-
+                    console.log(`${signer.address} remove liquidity approve:${err}`)
                 }
             }
         }
@@ -445,7 +446,7 @@ async function add_remove_liquidity(privateKey, amount) {
                 await wait_tx_ok(url, tx1.hash);
                 break
             } catch (err) {
-
+                console.log(`${signer.address} remove liquidity :${err}`)
             }
         }
     }
@@ -593,9 +594,9 @@ async function check() {
 // getBalance('0x86Fc8F04332446D5779a2bCA82D6cD50FC4e8365',Chain.Polygon,maticUsdc,6)
 // fromHop()
 // add_remove_liquidity('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46', 1)
-main()
+// main()
 // erc20Transfer('b4f490811d5fb27c71910014564d1391857a7c456d07c9bfc0ced867bd296d46','0xBa7cE7186719B90901c0687ABE5Ca0f2f36fA555',1)
 // nativateTansfer('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f','0x0aAa1Cbcc180Cfe4099a7e749be2b6A37F5edFB2',true)
 // send('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f', false)
 // test('57481c46d76379892a8e9ab74c44b5694850c442ee33ff7ff13fe8e1c63a915f',false,10)
-// check()
+check()
