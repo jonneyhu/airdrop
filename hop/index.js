@@ -103,9 +103,9 @@ async function send(privateKey, ismatic = true, amount = 0) {
     }
     if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
         if (ismatic) {
-            await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
+            await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
         } else {
-            await nativateTansfer('3a2f724de8de4c228b21a1167c405967c8c004e978dd0330612cf555eff1d885', signer.address, false, 0.1)
+            await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, false, 0.1,10000)
 
         }
     }
@@ -229,7 +229,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
         return
     }
     if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
-        await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
+        await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
     }
     // var privateKey = Buffer.from(from_key, 'hex');
     const matic_contract = new web3.eth.Contract(erc20TransferAbi, maticUsdc)
@@ -253,7 +253,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
 }
 
 
-async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0) {
+async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0,delay=0) {
     //将from的原生代币和usdc全部转给to地址　先转usdc再转原生代币（手续费）
     const xdaiurl = 'https://rpc.xdaichain.com/';
     const xdaichainid = 0x64;
@@ -312,8 +312,12 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0) {
             web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'), async function (err, hash) {
                 if (!err) {
                     console.log('nativate_transfer:', hash);
+                    if (sleep>0){
+                        sleep(delay)
+                    }
                     await wait_tx_ok(url, hash)
                 } else {
+                    console.log(`${signer.address} nativateTansfer11:${error}`)
                     throw err
                 }
             })
@@ -351,7 +355,7 @@ async function add_remove_liquidity(privateKey, amount) {
     if (balance.gte(BigNumber.from(amountBN))) {
         const nativate_balance = await getBalance(signer.address, Chain.Polygon)
         if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
-            await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
+            await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
         }
         const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
         const allowance = await l2CanonicalToken.allowance(matic_liqulity);
@@ -400,7 +404,7 @@ async function add_remove_liquidity(privateKey, amount) {
     }
     const nativate_balance = await getBalance(signer.address, Chain.Polygon)
     if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
-        await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
+        await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
     }
     const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
     const allowance1 = await lpToken.allowance(matic_liqulity)
