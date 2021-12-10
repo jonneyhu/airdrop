@@ -248,7 +248,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
         console.log(`${signer.address} erc20transfer:${err}`)
         for (let i = 0; i < 4; i++) {
             try {
-                await erc20transfer(from_key, to_addr, amount)
+                await erc20Transfer(from_key, to_addr, amount)
                 break
             } catch (err) {
 
