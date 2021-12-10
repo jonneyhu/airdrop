@@ -266,8 +266,8 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0) {
         var gasprice = web3.utils.toHex(web3.utils.toWei('30', 'gwei'))
         var signer = new Wallet(from_key);
         var _from = signer.address;
+        var balance = await getBalance(_from, Chain.Polygon)
         if (amount == 0) {
-            var balance = await getBalance(_from, Chain.Polygon)
             amount = balance - fee;
         } else {
             amount = amount * (Math.pow(10, 18));
@@ -281,15 +281,15 @@ async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0) {
         var gasprice = web3.utils.toHex(web3.utils.toWei('3', 'gwei'))
         var signer = new Wallet(from_key);
         var _from = signer.address;
+        var balance = await getBalance(_from, Chain.xDai)
         if (amount == 0) {
-            var balance = await getBalance(_from, Chain.xDai)
             amount = balance - fee;
         } else {
             amount = amount * (Math.pow(10, 18));
         }
         var chainid = xdaichainid;
     }
-    const amountBN1 = parseUnits(util.format('%s', 0.5), 18)
+    const amountBN1 = parseUnits(util.format('%s', 0.1), 18)
     if (balance.lt(BigNumber.from(amountBN1))) {
         console.log('nativatetransfer ignore:', signer.address)
         return
