@@ -93,12 +93,21 @@ async function send(privateKey, ismatic = true, amount = 0) {
         var sourceChain = Chain.xDai
         var balance = await getBalance(signer.address, Chain.xDai, xdaiUsdc, 6)
         var nativate_balance = await getBalance(signer.address, Chain.xDai)
+        amount = 1;
     }
     const decimals = 6
-    const amount_s = util.format('%s', 12);
+    const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
-    if (balance.lt(BigNumber.from(amountBN)) || nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+    if (balance.lt(BigNumber.from(amountBN))) {
         return false
+    }
+    if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+        if (ismatic) {
+            await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
+        } else {
+            await nativateTansfer('3a2f724de8de4c228b21a1167c405967c8c004e978dd0330612cf555eff1d885', signer.address, false, 0.1)
+
+        }
     }
     ammWrapper = await bridge.getAmmWrapper(sourceChain, signer);
     const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
@@ -215,9 +224,12 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
     }
     var nativate_balance = await getBalance(signer.address, Chain.Polygon)
     const amountBN1 = parseUnits(util.format('%s', 1), 6)
-    if (balance.lt(BigNumber.from(amountBN1)) || nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+    if (balance.lt(BigNumber.from(amountBN1))) {
         console.log('erc20transfer ignore:', signer.address)
         return
+    }
+    if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+        await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
     }
     // var privateKey = Buffer.from(from_key, 'hex');
     const matic_contract = new web3.eth.Contract(erc20TransferAbi, maticUsdc)
@@ -241,7 +253,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
 }
 
 
-async function nativateTansfer(from_key, to_addr, ismatic = false) {
+async function nativateTansfer(from_key, to_addr, ismatic = false, amount = 0) {
     //将from的原生代币和usdc全部转给to地址　先转usdc再转原生代币（手续费）
     const xdaiurl = 'https://rpc.xdaichain.com/';
     const xdaichainid = 0x64;
@@ -254,8 +266,13 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
         var gasprice = web3.utils.toHex(web3.utils.toWei('30', 'gwei'))
         var signer = new Wallet(from_key);
         var _from = signer.address;
-        var balance = await getBalance(_from, Chain.Polygon)
-        var amount = balance - fee;
+        if (amount == 0) {
+            var balance = await getBalance(_from, Chain.Polygon)
+            amount = balance - fee;
+        } else {
+            amount = amount * (Math.pow(10, 18));
+        }
+
         var chainid = maticchainid;
 
     } else {
@@ -264,8 +281,12 @@ async function nativateTansfer(from_key, to_addr, ismatic = false) {
         var gasprice = web3.utils.toHex(web3.utils.toWei('3', 'gwei'))
         var signer = new Wallet(from_key);
         var _from = signer.address;
-        var balance = await getBalance(_from, Chain.xDai)
-        var amount = balance - fee;
+        if (amount == 0) {
+            var balance = await getBalance(_from, Chain.xDai)
+            amount = balance - fee;
+        } else {
+            amount = amount * (Math.pow(10, 18));
+        }
         var chainid = xdaichainid;
     }
     const amountBN1 = parseUnits(util.format('%s', 0.5), 18)
@@ -326,12 +347,12 @@ async function add_remove_liquidity(privateKey, amount) {
     const amount_s = util.format('%s', amount);
     const amountBN = parseUnits(amount_s, decimals)
     const balance = await getBalance(signer.address, Chain.Polygon, maticUsdc, 6);
-    var nativate_balance = await getBalance(signer.address, Chain.Polygon)
-    if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
-        console.log('add_remove_liquidity ignore:', signer.address)
-        return
-    }
-    if (balance.gt(BigNumber.from(amountBN))){
+
+    if (balance.gte(BigNumber.from(amountBN))) {
+        const nativate_balance = await getBalance(signer.address, Chain.Polygon)
+        if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+            await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
+        }
         const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
         const allowance = await l2CanonicalToken.allowance(matic_liqulity);
         if (allowance.lt(BigNumber.from(amountBN))) {
@@ -376,6 +397,10 @@ async function add_remove_liquidity(privateKey, amount) {
     if (amountlp.lt(BigNumber.from(amountBN1))) {
         console.log('add_remove_liquidity ignore:', signer.address)
         return
+    }
+    const nativate_balance = await getBalance(signer.address, Chain.Polygon)
+    if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+        await nativateTansfer('b57f7b612533337fb9769e0f1cf704b3e3251cb221c832886ae418520e0ca32f', signer.address, true, 0.1)
     }
     const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
     const allowance1 = await lpToken.allowance(matic_liqulity)
@@ -481,41 +506,29 @@ function wait(ms) {
     return new Promise(resolve => setTimeout(() => resolve(), ms));
 };
 
-async function test1(addr, ismatic, j) {
-    if (ismatic) {
-        var url = 'https://polygon-rpc.com';
+async function test1(addr, j) {
 
-    } else {
-        var url = 'https://rpc.xdaichain.com/';
-    }
+
 
     // const provider = new providers.JsonRpcProvider(url)
     // const signer = new Wallet(privateKey, provider)
     // const hop = new Hop('mainnet', signer)
     // const bridge = hop.connect(signer).bridge('USDC')
-    if (ismatic) {
 
-        var balance = await getBalance(addr, Chain.Polygon, maticUsdc, 6)
-        var nativate_balance = await getBalance(addr, Chain.Polygon)
-        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))) {
-            console.log(`${j} matic usdc:${balance.toString()}-${addr}`)
-        }
-        if (nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))) {
-            console.log(`${j} matic nativate:${nativate_balance.toString()}-${addr}`)
-        }
 
+    var mbalance = await getBalance(addr, Chain.Polygon, maticUsdc, 6)
+    var mnativate_balance = await getBalance(addr, Chain.Polygon)
+    if (mbalance.gt(parseUnits(util.format('%s', 0.1), 6)) && mnativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+        console.log(`${j} matic usdc:${mbalance.toString()}-${addr}`)
     }
-    else {
 
-        var balance = await getBalance(addr, Chain.xDai, xdaiUsdc, 6)
-        var nativate_balance = await getBalance(addr, Chain.xDai)
-        if (balance.gt(parseUnits(util.format('%s', 0.1), 6))) {
-            console.log(`${j} xdai usdc:${balance.toString()}-${addr}`)
-        }
-        if (nativate_balance.gt(parseUnits(util.format('%s', 0.1), 18))) {
-            console.log(`${j} xdai nativate:${nativate_balance.toString()}-${addr}`)
-        }
+    var xbalance = await getBalance(addr, Chain.xDai, xdaiUsdc, 6)
+    var xnativate_balance = await getBalance(addr, Chain.xDai)
+    if (xbalance.gt(parseUnits(util.format('%s', 0.1), 6)) && xnativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
+        console.log(`${j} xdai usdc:${xbalance.toString()}-${addr}`)
     }
+
+
 }
 
 async function test(lines, j) {
@@ -523,8 +536,7 @@ async function test(lines, j) {
         let item = lines[i];
         let line = item.split(" ");
         let addr = line[0];
-        await test1(addr, true, j)
-        await test1(addr, false, j)
+        await test1(addr, j)
         const amountBN1 = parseUnits(util.format('%s', 1), 6)
         let amountlp = await getBalance(addr, Chain.Polygon, usdcLp, 6);
         if (amountlp.gt(BigNumber.from(amountBN1))) {
