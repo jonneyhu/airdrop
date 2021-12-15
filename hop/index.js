@@ -110,9 +110,9 @@ async function send(privateKey, ismatic = true, amount = 0) {
     if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
         if (ismatic) {
             console.log(`send ${nativate_balance.toString()} ${parseUnits(util.format('%s', 0.1), 18)}`)
-            await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
+            await nativateTansfer('de08ca824d6f8998653b7fd3a14682b0dc408ee2f63fc8226958857e8510d459', signer.address, true, 0.1,10000)
         } else {
-            await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, false, 0.1,10000)
+            await nativateTansfer('de08ca824d6f8998653b7fd3a14682b0dc408ee2f63fc8226958857e8510d459', signer.address, false, 0.1,10000)
 
         }
     }
@@ -236,7 +236,7 @@ async function erc20Transfer(from_key, to_addr, amount = 0) {
         return
     }
     if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
-        await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
+        await nativateTansfer('de08ca824d6f8998653b7fd3a14682b0dc408ee2f63fc8226958857e8510d459', signer.address, true, 0.1,10000)
     }
     // var privateKey = Buffer.from(from_key, 'hex');
     const matic_contract = new web3.eth.Contract(erc20TransferAbi, maticUsdc)
@@ -362,7 +362,7 @@ async function add_remove_liquidity(privateKey, amount) {
     if (balance.gte(BigNumber.from(amountBN))) {
         const nativate_balance = await getBalance(signer.address, Chain.Polygon)
         if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
-            await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
+            await nativateTansfer('de08ca824d6f8998653b7fd3a14682b0dc408ee2f63fc8226958857e8510d459', signer.address, true, 0.1,10000)
         }
         const l2CanonicalToken = bridge.getCanonicalToken(sourceChain);
         const allowance = await l2CanonicalToken.allowance(matic_liqulity);
@@ -411,7 +411,7 @@ async function add_remove_liquidity(privateKey, amount) {
     }
     const nativate_balance = await getBalance(signer.address, Chain.Polygon)
     if (nativate_balance.lt(parseUnits(util.format('%s', 0.1), 18))) {
-        await nativateTansfer('a6c9ec909d60f9503bc44924d1bed6eecb5aba97832597873ecc45445b1c3a40', signer.address, true, 0.1,10000)
+        await nativateTansfer('de08ca824d6f8998653b7fd3a14682b0dc408ee2f63fc8226958857e8510d459', signer.address, true, 0.1,10000)
     }
     const lpToken = await bridge.getSaddleLpToken(Chain.Polygon)
     const allowance1 = await lpToken.allowance(matic_liqulity)
